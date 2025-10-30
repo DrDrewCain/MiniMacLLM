@@ -1,0 +1,72 @@
+# Gitleaks configuration for secret scanning
+# https://github.com/gitleaks/gitleaks
+
+[extend]
+# Extend the base configuration
+useDefault = true
+
+[allowlist]
+# Custom allowlist for your project
+description = "Custom allowlist for MiniMacLLM"
+paths = [
+    # Ignore specific files that might trigger false positives
+    '''requirements\.txt''',
+    '''poetry\.lock''',
+    '''Pipfile\.lock''',
+    '''\.gitignore''',
+    '''README\.md''',
+    '''docs/.*\.md''',
+    # Ignore test files with dummy credentials
+    '''tests/.*test.*\.py''',
+    '''tests/fixtures/.*''',
+]
+
+# Allow specific patterns that are not actual secrets
+regexes = [
+    # Example: Allow dummy API keys in documentation
+    '''sk-test[a-zA-Z0-9]{32}''',
+    # Model hashes or checksums
+    '''[a-f0-9]{64}''',
+]
+
+[[rules]]
+# Custom rule for detecting potential model API keys
+id = "model-api-key"
+description = "Model API Key"
+regex = '''(?i)(openai|anthropic|cohere|huggingface)[-_]?(api)?[-_]?(key|token)["']*\s*[:=]\s*["']([a-zA-Z0-9\-\_]{20,})["']'''
+tags = ["api", "key"]
+secretGroup = 4
+
+[[rules]]
+# Custom rule for AWS credentials in code
+id = "aws-access-key"
+description = "AWS Access Key"
+regex = '''(?i)aws[-_]?access[-_]?key[-_]?id["']*\s*[:=]\s*["']([A-Z0-9]{20})["']'''
+tags = ["aws", "credential"]
+secretGroup = 1
+
+# Ignore certain commits (e.g., initial commits with example configs)
+[allowlist.commits]
+# commits = ["commit-hash-to-ignore"]
+
+# File extensions to scan
+[scan]
+# Add custom file extensions if needed
+# include = ["*.py", "*.yaml", "*.yml", "*.json", "*.env", "*.ini", "*.cfg", "*.conf", "*.sh", "*.bash"]
+
+# Entropy checks for high-entropy strings that might be secrets
+[[rules]]
+id = "high-entropy-base64"
+description = "High entropy base64 strings"
+regex = '''[a-zA-Z0-9+/]{40,}={0,2}'''
+entropy = 5.5
+secretGroup = 0
+tags = ["entropy"]
+
+[[rules]]
+id = "high-entropy-hex"
+description = "High entropy hex strings"
+regex = '''[a-f0-9]{40,}'''
+entropy = 5.5
+secretGroup = 0
+tags = ["entropy"]

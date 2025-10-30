@@ -1,0 +1,64 @@
+# Dependabot configuration for automated dependency updates and security patches
+version: 2
+updates:
+  # Python dependencies
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "10:00"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "security"
+    assignees:
+      - "DrDrewCain"  # Update with your GitHub username
+    reviewers:
+      - "DrDrewCain"  # Update with your GitHub username
+    commit-message:
+      prefix: "chore"
+      prefix-development: "chore"
+      include: "scope"
+    # Group updates for easier review
+    groups:
+      development-dependencies:
+        patterns:
+          - "pytest*"
+          - "black"
+          - "isort"
+          - "mypy"
+          - "ruff"
+      ml-dependencies:
+        patterns:
+          - "torch*"
+          - "numpy"
+          - "transformers"
+          - "datasets"
+    # Ignore specific updates if needed
+    ignore:
+      # Example: Don't update torch past 2.x for compatibility
+      # - dependency-name: "torch"
+      #   versions: ["3.x"]
+
+  # GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+    labels:
+      - "github-actions"
+      - "ci/cd"
+    commit-message:
+      prefix: "ci"
+    # Keep actions up to date
+    open-pull-requests-limit: 3
+
+  # Docker dependencies (if you add Dockerfile later)
+  # - package-ecosystem: "docker"
+  #   directory: "/"
+  #   schedule:
+  #     interval: "weekly"
+  #   labels:
+  #     - "docker"
+  #     - "dependencies"
