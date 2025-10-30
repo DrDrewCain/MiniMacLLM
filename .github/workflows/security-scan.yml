@@ -1,0 +1,168 @@
+# Comprehensive Security Scanning
+# Runs multiple security tools for Python code analysis
+name: Security Scan
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:  # Allow manual triggering
+
+jobs:
+  bandit:
+    name: Bandit Security Scan
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+
+    - name: Install Bandit
+      run: |
+        python -m pip install --upgrade pip
+        pip install bandit[toml]
+
+    - name: Run Bandit
+      run: |
+        # Scan all Python files, excluding tests and virtual environments
+        bandit -r src/ scripts/ -f json -o bandit-report.json || true
+        # Also create human-readable report
+        bandit -r src/ scripts/ -f txt -o bandit-report.txt || true
+
+    - name: Upload Bandit results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: bandit-results
+        path: |
+          bandit-report.json
+          bandit-report.txt
+
+    - name: Parse Bandit results
+      if: always()
+      run: |
+        # Show summary in PR
+        echo "## 🔒 Bandit Security Scan Results" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        if [ -f bandit-report.txt ]; then
+          # Extract summary line
+          grep -E "Run started|Total issues" bandit-report.txt >> $GITHUB_STEP_SUMMARY || true
+          echo "" >> $GITHUB_STEP_SUMMARY
+          # Show high severity issues if any
+          if grep -q "Severity: High" bandit-report.txt; then
+            echo "⚠️ **High severity issues found!**" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+            grep -A 5 "Severity: High" bandit-report.txt >> $GITHUB_STEP_SUMMARY || true
+            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "✅ No high severity issues found" >> $GITHUB_STEP_SUMMARY
+          fi
+        fi
+
+  safety:
+    name: Safety Dependency Check
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install safety
+
+    - name: Run Safety check
+      run: |
+        # Check for known security vulnerabilities in dependencies
+        safety check --json --output safety-report.json || true
+        safety check --output safety-report.txt || true
+
+    - name: Upload Safety results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: safety-results
+        path: |
+          safety-report.json
+          safety-report.txt
+
+    - name: Parse Safety results
+      if: always()
+      run: |
+        echo "## 📦 Dependency Security Scan Results" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        if [ -f safety-report.txt ]; then
+          if grep -q "no known security" safety-report.txt; then
+            echo "✅ All dependencies are secure" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "⚠️ **Security vulnerabilities found in dependencies!**" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+            cat safety-report.txt >> $GITHUB_STEP_SUMMARY
+            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          fi
+        fi
+
+  semgrep:
+    name: Semgrep SAST Scan
+    runs-on: ubuntu-latest
+    container:
+      image: returntocorp/semgrep
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Run Semgrep
+      run: |
+        # Run comprehensive Python security rules
+        semgrep --config=auto \
+                --json \
+                --output=semgrep-report.json \
+                src/ scripts/ || true
+
+        # Also create readable report
+        semgrep --config=auto \
+                --output=semgrep-report.txt \
+                src/ scripts/ || true
+
+    - name: Upload Semgrep results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: semgrep-results
+        path: |
+          semgrep-report.json
+          semgrep-report.txt
+
+    - name: Parse results summary
+      if: always()
+      run: |
+        echo "## 🔍 Semgrep SAST Scan Results" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        if [ -f semgrep-report.txt ]; then
+          # Count findings
+          findings=$(grep -c "findings" semgrep-report.txt || echo "0")
+          echo "Total findings: $findings" >> $GITHUB_STEP_SUMMARY
+        fi
+
+  # Secret scanning
+  gitleaks:
+    name: Secret Scanning
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # Fetch all history for scanning
+
+    - name: Run Gitleaks
+      uses: gitleaks/gitleaks-action@v2
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
