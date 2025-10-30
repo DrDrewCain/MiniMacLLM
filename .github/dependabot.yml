@@ -36,10 +36,10 @@ updates:
           - "transformers"
           - "datasets"
     # Ignore specific updates if needed
-    ignore:
-      # Example: Don't update torch past 2.x for compatibility
-      # - dependency-name: "torch"
-      #   versions: ["3.x"]
+    # ignore:
+    #   # Example: Don't update torch past 2.x for compatibility
+    #   # - dependency-name: "torch"
+    #   #   versions: ["3.x"]
 
   # GitHub Actions
   - package-ecosystem: "github-actions"
