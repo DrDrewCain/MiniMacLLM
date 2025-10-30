@@ -1,8 +1,0 @@
-# Ignore all checkpoint files
-*.pt
-*.pth
-*.ckpt
-
-# Keep the directory structure
-!.gitignore
-!README.md

@@ -44,33 +44,29 @@ venv.bak/
 .coverage
 htmlcov/
 
-# Model checkpoints and training artifacts
-checkpoints/**/*.pt
-checkpoints/**/*.pth
-checkpoints/**/*.ckpt
-checkpoints/**/*.bin
-checkpoints/**/*.safetensors
-*.pt
-*.pth
-*.ckpt
-!configs/*.yaml
+# Model checkpoints - Only keep final trained model
+# Block all checkpoints
+checkpoints/*
 
-# Keep checkpoint structure but ignore model files
+# EXCEPT the final model directory
+!checkpoints/wikitext_medium/
+!checkpoints/wikitext_medium/final/
+!checkpoints/wikitext_medium/final/**
+
+# Block intermediate epoch checkpoints
+checkpoints/wikitext_medium/epoch_*/
+
+# Keep README
 !checkpoints/README.md
 
-# Tokenizers (keep configs, ignore trained models)
-data/tokenizers/**/*.json
-data/tokenizers/**/*.model
-data/tokenizers/**/*.vocab
+# Data directory - Block all data files
+data/*
+data/**/*
 
-# Training data (too large for git)
-data/raw/*.txt
-data/raw/*.json
-data/raw/*.csv
-data/processed/*.txt
-data/processed/*.json
-data/processed/*.csv
-data/continual_learning/*.txt
+# Keep only README files
+!data/README.md
+!data/*/README.md
+!data/.gitkeep
 
 # Keep example/sample data
 !data/raw/sample.txt
