@@ -195,13 +195,16 @@ def main():
             # This is a continual learning checkpoint with LoRA - wrap and load full state
             print("Detected LoRA checkpoint, loading with LoRA wrapper...")
 
-            # Create LoRA wrapper (we need to infer config from the checkpoint)
-            lora_config = LoRAConfig(
-                r=16,  # Default from continual learning
-                alpha=32.0,
-                dropout=0.0,
-                target_modules=["q_proj", "k_proj", "v_proj", "o_proj", "w1", "w2", "w3"]
-            )
+            # Create LoRA wrapper (extract config from checkpoint if available)
+            if 'lora_config' in checkpoint:
+                lora_config = LoRAConfig(**checkpoint['lora_config'])
+            else:
+                lora_config = LoRAConfig(
+                    r=16,  # Default from continual learning
+                    alpha=32.0,
+                    dropout=0.0,
+                    target_modules=["q_proj", "k_proj", "v_proj", "o_proj", "w1", "w2", "w3"]
+                )
             model = LoRAModel(base_model, lora_config, adapter_name="loaded")
             model.load_state_dict(state_dict, strict=False)
         else:
