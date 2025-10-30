@@ -127,7 +127,7 @@ zip -r ~/wikitext_medium_v1.0.0.zip checkpoints/wikitext_medium/final/model.pt
 
 ### Step 3: Upload via GitHub UI
 
-1. Go to your repo: `https://github.com/YOUR_USERNAME/MiniMacLLM`
+1. Go to your repo: `https://github.com/DrDrewCain/MiniMacLLM`
 2. Click "Releases" → "Create a new release"
 3. Tag: `v1.0.0`
 4. Title: `MiniMacLLM v1.0.0 - Initial Release`
@@ -159,7 +159,7 @@ First release of the continual learning LLM system!
 
 ```bash
 # Download release
-wget https://github.com/YOUR_USERNAME/MiniMacLLM/releases/download/v1.0.0/wikitext_medium_v1.0.0.tar.gz
+wget https://github.com/DrDrewCain/MiniMacLLM/releases/download/v1.0.0/wikitext_medium_v1.0.0.tar.gz
 tar -xzf wikitext_medium_v1.0.0.tar.gz
 
 # Install dependencies
@@ -178,34 +178,11 @@ python scripts/generate.py \
 - Source code (zip)
 - Source code (tar.gz)
 
-See [MODEL_CARD.md](https://github.com/YOUR_USERNAME/MiniMacLLM/blob/main/MODEL_CARD.md) for full details.
+See [MODEL_CARD.md](https://github.com/DrDrewCain/MiniMacLLM/blob/main/MODEL_CARD.md) for full details.
 ```
 
 6. Attach `wikitext_medium_v1.0.0.tar.gz` (485MB)
 7. Click "Publish release"
-
----
-
-## Option 3: External Hosting
-
-Host the model elsewhere and link from GitHub:
-
-### Google Drive / Dropbox
-
-```bash
-# Upload to Google Drive, get shareable link
-# Add to README.md:
-```
-
-**Download Pre-trained Model:**
-- [WikiText-2 Model (485MB)](https://drive.google.com/your-link-here)
-- [Tokenizer (820KB)](https://drive.google.com/your-tokenizer-link)
-
-```bash
-# Or use gdown for Google Drive
-pip install gdown
-gdown https://drive.google.com/uc?id=YOUR_FILE_ID
-```
 
 ---
 
@@ -281,7 +258,7 @@ Update README.md with download instructions:
 
 ### Via Git LFS (if using LFS)
 ```bash
-git clone https://github.com/YOUR_USERNAME/MiniMacLLM.git
+git clone https://github.com/DrDrewCain/MiniMacLLM.git
 cd MiniMacLLM
 # Model automatically downloaded with LFS
 ```
@@ -289,11 +266,11 @@ cd MiniMacLLM
 ### Via GitHub Release
 ```bash
 # Clone code
-git clone https://github.com/YOUR_USERNAME/MiniMacLLM.git
+git clone https://github.com/DrDrewCain/MiniMacLLM.git
 cd MiniMacLLM
 
 # Download model
-wget https://github.com/YOUR_USERNAME/MiniMacLLM/releases/download/v1.0.0/wikitext_medium_v1.0.0.tar.gz
+wget https://github.com/DrDrewCain/MiniMacLLM/releases/download/v1.0.0/wikitext_medium_v1.0.0.tar.gz
 tar -xzf wikitext_medium_v1.0.0.tar.gz -C checkpoints/wikitext_medium/final/
 ```
 ```
@@ -307,7 +284,7 @@ tar -xzf wikitext_medium_v1.0.0.tar.gz -C checkpoints/wikitext_medium/final/
 ```bash
 # Clone fresh copy
 cd /tmp
-git clone https://github.com/YOUR_USERNAME/MiniMacLLM.git
+git clone https://github.com/DrDrewCain/MiniMacLLM.git
 cd MiniMacLLM
 
 # Install deps
@@ -343,7 +320,7 @@ Key features:
 - Zero catastrophic forgetting
 - Add new domains with only 2.2% parameter increase
 
-GitHub: https://github.com/YOUR_USERNAME/MiniMacLLM
+GitHub: https://github.com/DrDrewCain/MiniMacLLM
 
 Built in Python, trained on M3 Max, fully open source (MIT).
 
@@ -385,7 +362,7 @@ Users can then:
 
 ```bash
 # Clone with LFS (model downloads automatically)
-git lfs clone https://github.com/YOUR_USERNAME/MiniMacLLM.git
+git lfs clone https://github.com/DrDrewCain/MiniMacLLM.git
 ```
 
 ---

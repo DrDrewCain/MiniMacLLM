@@ -17,6 +17,8 @@ sys.path.append(str(Path(__file__).parent.parent))
 
 from src.model.llm import ContinualLLM, ModelConfig
 from src.tokenization.bpe_tokenizer import BPETokenizer
+from src.lora.lora_model import LoRAModel
+from src.lora.lora_layer import LoRAConfig
 
 
 def generate_text(model, tokenizer, prompt, device, **generation_kwargs):
@@ -181,12 +183,49 @@ def main():
     checkpoint = torch.load(args.model, map_location='cpu')
 
     config = ModelConfig(**checkpoint['config'])
-    model = ContinualLLM(config)
-    model.load_state_dict(checkpoint['model_state_dict'])
+    base_model = ContinualLLM(config)
+
+    # Check if this is a continual learning checkpoint (has LoRA)
+    if 'state_dict' in checkpoint:
+        state_dict = checkpoint['state_dict']
+        # Check if state dict has LoRA components (has 'base_model.' prefix or 'lora' keys)
+        has_lora = any('lora' in key or 'base_model.' in key for key in state_dict.keys())
+
+        if has_lora:
+            # This is a continual learning checkpoint with LoRA - wrap and load full state
+            print("Detected LoRA checkpoint, loading with LoRA wrapper...")
+
+            # Create LoRA wrapper (we need to infer config from the checkpoint)
+            lora_config = LoRAConfig(
+                r=16,  # Default from continual learning
+                alpha=32.0,
+                dropout=0.0,
+                target_modules=["q_proj", "k_proj", "v_proj", "o_proj", "w1", "w2", "w3"]
+            )
+            model = LoRAModel(base_model, lora_config, adapter_name="loaded")
+            model.load_state_dict(state_dict, strict=False)
+        else:
+            # Regular checkpoint without LoRA
+            model = base_model
+            model.load_state_dict(state_dict, strict=False)
+    elif 'model_state_dict' in checkpoint:
+        # Pretrain format - no LoRA
+        state_dict = checkpoint['model_state_dict']
+        model = base_model
+        model.load_state_dict(state_dict)
+    else:
+        raise KeyError("Checkpoint must contain either 'model_state_dict' or 'state_dict'")
+
     model.to(device)
     model.eval()
 
-    print(f"✓ Loaded: {model.get_num_params():,} parameters\n")
+    # Get param count (handle both LoRAModel and regular model)
+    if hasattr(model, 'get_num_params'):
+        num_params = model.get_num_params()
+    else:
+        num_params = sum(p.numel() for p in model.parameters())
+
+    print(f"✓ Loaded: {num_params:,} parameters\n")
 
     # Generation kwargs
     generation_kwargs = {

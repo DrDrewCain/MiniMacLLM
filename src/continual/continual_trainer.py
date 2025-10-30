@@ -263,14 +263,14 @@ class ContinualLearner:
             # Pad input_ids
             pad_len = max_len - exp.input_ids.size(0)
             if pad_len > 0:
-                padded_input = torch.cat([exp.input_ids, torch.zeros(pad_len, dtype=exp.input_ids.dtype)])
+                padded_input = torch.cat([exp.input_ids, torch.zeros(pad_len, dtype=exp.input_ids.dtype, device=exp.input_ids.device)])
             else:
                 padded_input = exp.input_ids
             input_ids_list.append(padded_input)
 
             # Pad labels
             if pad_len > 0:
-                padded_labels = torch.cat([exp.labels, torch.full((pad_len,), -1, dtype=exp.labels.dtype)])
+                padded_labels = torch.cat([exp.labels, torch.full((pad_len,), -1, dtype=exp.labels.dtype, device=exp.labels.device)])
             else:
                 padded_labels = exp.labels
             labels_list.append(padded_labels)
@@ -505,13 +505,17 @@ class ContinualLearner:
         save_path = Path(save_dir)
         save_path.mkdir(parents=True, exist_ok=True)
 
-        # Save full model state (for complete checkpoint)
-        torch.save(self.model.state_dict(), save_path / "model.pt")
+        # Save full model state (for complete checkpoint) including config
+        checkpoint = {
+            'state_dict': self.model.state_dict(),
+            'config': self.model.base_model.config.__dict__  # Save model architecture config
+        }
+        torch.save(checkpoint, save_path / "model.pt")
 
         # Save LoRA adapter
         self.model.save_adapter(str(save_path / "adapter.pt"), self.adapter_name)
 
-        # Save config as JSON
+        # Save continual learning config as JSON
         import json
         with open(save_path / "config.json", 'w') as f:
             json.dump(self.config.__dict__, f, indent=2)
@@ -547,10 +551,15 @@ class ContinualLearner:
             # Load full model state (includes both base model and LoRA)
             # Use strict=False to handle any minor mismatches
             try:
-                self.model.load_state_dict(
-                    torch.load(load_path / "model.pt", map_location=self.device),
-                    strict=False
-                )
+                checkpoint = torch.load(load_path / "model.pt", map_location=self.device)
+                # Handle both old format (dict with state_dict) and new format (dict with state_dict + config)
+                if isinstance(checkpoint, dict) and 'state_dict' in checkpoint:
+                    state_dict = checkpoint['state_dict']
+                else:
+                    # Old format - checkpoint is directly the state_dict
+                    state_dict = checkpoint
+
+                self.model.load_state_dict(state_dict, strict=False)
                 print(f"Loaded full model state from {load_path / 'model.pt'}")
             except Exception as e:
                 print(f"Warning: Could not load model.pt, falling back to adapter: {e}")
