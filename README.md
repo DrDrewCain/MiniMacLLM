@@ -5,7 +5,7 @@
 **A continual learning LLM designed to outperform ChatGPT-3.5 on specialized tasks with 1000x fewer parameters**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Python 3.12+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
+[![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
 [![Apple Silicon](https://img.shields.io/badge/Apple%20Silicon-Optimized-black.svg)](https://www.apple.com/mac/)
 
 ---
@@ -101,7 +101,7 @@ python scripts/train_tokenizer.py \
   --vocab_size 8000 \
   --save data/tokenizers/my_tokenizer
 
-# 2. Pre-train base model
+# 2. Pretrain base model
 python scripts/pretrain.py \
   --config configs/medium.yaml \
   --data data/raw/wikitext2_train.txt \
@@ -382,7 +382,7 @@ num_kv_heads: 4
 - [x] 100% test coverage (122/122 tests passing)
 
 ### Phase 2: Performance (In Progress)
-- [x] Pre-train base models
+- [x] Pretrain base models
 - [ ] Knowledge distillation from GPT-4
 - [ ] Benchmark on specialized tasks
 - [ ] Beat GPT-3.5 on first domain

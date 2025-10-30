@@ -6,7 +6,7 @@ Continual LLM is a modern transformer-based language model with continual learni
 
 ## System Architecture
 
-```
+```text
 ┌─────────────────────────────────────────────────┐
 │           Continual LLM System                  │
 ├─────────────────────────────────────────────────┤
@@ -25,8 +25,7 @@ Continual LLM is a modern transformer-based language model with continual learni
 │  └──────────────────────────────────────────┘  │
 │                                                 │
 └─────────────────────────────────────────────────┘
-```
-
+```text
 ## Core Components
 
 ### 1. Modern Transformer Architecture
@@ -104,8 +103,7 @@ src/
 ├── evaluation/             # Metrics
 ├── data/                   # Data loading
 └── utils/                  # Helpers
-```
-
+```text
 ## Data Flow
 
 ### Training Flow
@@ -118,8 +116,7 @@ Raw Text → Tokenizer → Token IDs → Model → Logits → Loss
                               │                │
                          LoRA Weights    Base Weights
                          (trainable)      (frozen)
-```
-
+```text
 ### Continual Learning Flow
 
 ```

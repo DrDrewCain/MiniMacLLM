@@ -18,17 +18,15 @@
 ## The Core Problem: Catastrophic Forgetting
 
 ### Traditional LLM Paradigm ❌
-```
-Pre-train (months) → Fine-tune (hours) → Deploy (static) → Forget old task when learning new
-```
-
+```text
+Pretrain (months) → Fine-tune (hours) → Deploy (static) → Forget old task when learning new
+```text
 ### Our Paradigm ✅
 ```
 Base Model → Continuous Learning → Real-time Updates → NEVER FORGET
            ↓
     User Data Stream → Update Weights → Retain All Knowledge
-```
-
+```text
 ### The Challenge
 When neural networks learn new tasks, they **catastrophically forget** old tasks. This is the #1 problem we must solve.
 
@@ -84,8 +82,7 @@ When neural networks learn new tasks, they **catastrophically forget** old tasks
 │                   INFERENCE ENGINE                           │
 │  • Fast generation  • MPS optimized  • Multi-adapter        │
 └─────────────────────────────────────────────────────────────┘
-```
-
+```text
 ---
 
 ## Core Components
@@ -113,7 +110,7 @@ max_seq_len: 2048     # Start with shorter context
 
 **Training Strategy:**
 ```
-1. Pre-train on general corpus (one-time)
+1. Pretrain on general corpus (one-time)
 2. [Optional] Distill from large LLM (GPT-4, Claude)
 3. Deploy as frozen base
 4. All adaptation via LoRA
@@ -176,8 +173,7 @@ User Data: "Medical document"
 
 User Data: "General conversation"
 → Activate: [base, chat_adapter]
-```
-
+```text
 ---
 
 ### 3. Experience Replay Buffer - PREVENTS FORGETTING
@@ -823,7 +819,7 @@ Target: < 50MB per domain adapter
 5. 🔄 Test basic continual learning on toy task
 
 ### Questions to Address:
-1. Should we pre-train a base model or use an existing small model (TinyLlama, etc.)?
+1. Should we pretrain a base model or use an existing small model (TinyLlama, etc.)?
 2. What should be the initial knowledge of the base model?
 3. How to handle multi-domain data (code + docs + chat)?
 4. UI/UX: How should users provide data? (File upload? API? Live monitoring?)

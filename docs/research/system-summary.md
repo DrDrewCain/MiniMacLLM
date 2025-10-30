@@ -1,6 +1,6 @@
 # Real-Time Adaptive LLM - System Summary
 
-## 🎯 What We Built
+## What We Built
 
 A **research-level continual learning LLM** that can:
 - Learn from user data in real-time (updates in seconds)
@@ -13,12 +13,12 @@ A **research-level continual learning LLM** that can:
 
 ---
 
-## 🏗️ Architecture Overview
+## Architecture Overview
 
 ### The Problem We Solved
 
 Traditional LLMs (GPT, LLaMA, Claude):
-```
+```text
 Train once (months) → Deploy → Static forever
 ❌ Can't learn new information without full retraining
 ❌ Catastrophically forgets when learning new tasks
@@ -26,7 +26,7 @@ Train once (months) → Deploy → Static forever
 ```
 
 Our System:
-```
+```text
 Small base model → Continuous learning → Never forgets → Updates in seconds
 ✅ Learns from user data in real-time
 ✅ Mathematical guarantees against forgetting
@@ -52,7 +52,7 @@ Small base model → Continuous learning → Never forgets → Updates in second
 
 ---
 
-## 📦 What's Implemented (11 Major Components)
+## What's Implemented (11 Major Components)
 
 ### Core LLM Architecture (6 components)
 
@@ -112,9 +112,9 @@ Small base model → Continuous learning → Never forgets → Updates in second
 
 ---
 
-## 💻 Code Organization
+## Code Organization
 
-```
+```text
 src/
 ├── model/                 # Modern LLM architecture
 │   ├── normalization.py  # RMSNorm
@@ -138,7 +138,7 @@ src/
 
 ---
 
-## 🚀 How It Works (Step-by-Step)
+## How It Works (Step-by-Step)
 
 ### 1. Initialization
 
@@ -242,7 +242,7 @@ learner.load_checkpoint("my_model")
 
 ---
 
-## 🔬 Technical Innovations
+## Technical Innovations
 
 ### 1. Zero Catastrophic Forgetting
 
@@ -251,13 +251,13 @@ learner.load_checkpoint("my_model")
 **Our Solution (3-pronged):**
 
 **Experience Replay:**
-```
+```text
 New batch = 50% new data + 50% replayed old data
 → Model constantly rehearses old knowledge
 ```
 
 **EWC (Mathematical Protection):**
-```
+```text
 Loss = Task_Loss + λ * Σ F_i * (θ_i - θ_i*)²
       ↑                    ↑         ↑
    New task        Importance   Old weights
@@ -266,7 +266,7 @@ Loss = Task_Loss + λ * Σ F_i * (θ_i - θ_i*)²
 ```
 
 **LoRA (Surgical Updates):**
-```
+```text
 Only update low-rank matrices, not full weights
 → Base knowledge stays frozen
 → Adaptations are additive
@@ -291,7 +291,7 @@ Only update low-rank matrices, not full weights
 
 ### 3. Multi-Domain Mastery
 
-```
+```text
 Base Model (frozen, 200M params)
     ↓
 Math Adapter (200K params)
@@ -306,7 +306,7 @@ Compare to traditional: 3 separate 7B models = 21B params
 
 ---
 
-## 🎯 Performance Characteristics
+## Performance Characteristics
 
 ### Model Sizes
 
@@ -346,7 +346,7 @@ Example:
 
 ---
 
-## 📊 What Still Needs Implementation
+## What Still Needs Implementation
 
 ### Priority 1: Essential (5-8 hours)
 
@@ -356,7 +356,7 @@ Example:
    - Impact: Better quality, smaller vocab
 
 2. **Training Scripts** (1-2 hours)
-   - Easy pre-training on datasets
+   - Easy pretraining on datasets
    - Continual learning examples
    - Evaluation scripts
 
@@ -400,7 +400,7 @@ Example:
 
 ---
 
-## 🎓 Key Insights & Learnings
+## Key Insights & Learnings
 
 ### 1. Small Can Beat Large (on specialized tasks)
 
@@ -409,7 +409,7 @@ A 200M model that learns continuously > 70B static model on user's specific doma
 
 **Why:**
 - Specialized > General
-- Recent learning > Stale pre-training
+- Recent learning > Stale pretraining
 - Efficient updates > Massive scale
 
 ### 2. Forgetting is Solvable
@@ -436,11 +436,11 @@ A 200M model that learns continuously > 70B static model on user's specific doma
 
 ---
 
-## 🔮 Future Enhancements
+## Future Enhancements
 
 ### Short-Term (Next 1-2 weeks)
 - Complete tokenizer
-- Pre-train base model (50M-200M)
+- Pretrain base model (50M-200M)
 - Test on real datasets
 - Measure forgetting empirically
 
@@ -458,7 +458,7 @@ A 200M model that learns continuously > 70B static model on user's specific doma
 
 ---
 
-## 💡 Use Cases
+## Use Cases
 
 ### 1. Personal AI Assistant
 - Learns from your documents
@@ -484,7 +484,7 @@ A 200M model that learns continuously > 70B static model on user's specific doma
 
 ---
 
-## 🎉 What Makes This Special
+## What Makes This Special
 
 ### Research-Level Innovation
 - Novel combination of techniques
@@ -511,7 +511,7 @@ A 200M model that learns continuously > 70B static model on user's specific doma
 
 ---
 
-## 📈 Metrics to Track
+## Metrics to Track
 
 ### During Training
 - Task loss (how well it learns)
@@ -533,13 +533,13 @@ A 200M model that learns continuously > 70B static model on user's specific doma
 
 ---
 
-## 🚀 Getting Started (Once Tokenizer is Done)
+## Getting Started (Once Tokenizer is Done)
 
-```python
+```bash
 # 1. Install dependencies
 pip install -r requirements.txt
 
-# 2. Pre-train base model (optional, or start from scratch)
+# 2. Pretrain base model (optional, or start from scratch)
 python scripts/pretrain.py --config configs/small.yaml
 
 # 3. Create continual learner
@@ -558,7 +558,7 @@ learner.save_checkpoint("my_custom_llm")
 
 ---
 
-## 📚 References & Citations
+## References & Citations
 
 **Core Techniques:**
 1. LoRA: "Low-Rank Adaptation of Large Language Models" (Hu et al., 2021)
@@ -577,7 +577,7 @@ learner.save_checkpoint("my_custom_llm")
 
 ---
 
-## 🎯 Success Criteria
+## Success Criteria
 
 ### Technical
 - ✅ Zero catastrophic forgetting (< 5% loss on old tasks)

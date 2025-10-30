@@ -34,7 +34,7 @@ This document details the architectural design for upgrading our LLM to include 
 ## Proposed Architecture
 
 ### File Structure
-```
+```text
 Custom_ML_Agent/
 ├── Model.py                    # Legacy basic model (keep for reference)
 ├── REQUIREMENTS.md            # Complete requirements doc ✅
@@ -128,8 +128,7 @@ Custom_ML_Agent/
     ├── raw/                       # Raw text data
     ├── processed/                 # Preprocessed data
     └── tokenizers/                # Trained tokenizers
-```
-
+```text
 ---
 
 ## Core Components Design
@@ -171,8 +170,7 @@ class GroupedQueryAttention(nn.Module):
         # 4. Compute attention
         # 5. Return output + cache
         pass
-```
-
+```text
 **Key Benefits:**
 - 4-8x reduction in KV cache size
 - Minimal quality degradation vs MHA

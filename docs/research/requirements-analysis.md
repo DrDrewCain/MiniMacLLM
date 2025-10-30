@@ -8,7 +8,7 @@ This document outlines the requirements for building a state-of-the-art Large La
 ## 1. Core Architecture Components
 
 ### 1.1 Attention Mechanisms ⭐ CRITICAL
-**Current State-of-the-Art:**
+#### Current State-of-the-Art
 - **Grouped Query Attention (GQA)** - Industry standard (used in Llama 3, Mistral)
   - Shares key/value matrices across attention heads
   - Reduces KV cache size significantly
@@ -23,7 +23,7 @@ This document outlines the requirements for building a state-of-the-art Large La
   - Supports head dimensions up to 256
   - Native MQA/GQA support
 
-**What We Need:**
+#### What We Need
 ```python
 - GQA implementation (primary)
 - Optional MLA for experimentation
@@ -32,13 +32,13 @@ This document outlines the requirements for building a state-of-the-art Large La
 ```
 
 ### 1.2 Positional Encodings ⭐ CRITICAL
-**Current State-of-the-Art:**
+#### Current State-of-the-Art
 - **Rotary Position Embeddings (RoPE)** - Universal standard
   - Used in all modern LLMs (Llama, GPT, Mistral)
   - Better extrapolation to longer sequences
   - Encodes relative position information naturally
 
-**What We Need:**
+#### What We Need
 ```python
 - RoPE implementation replacing absolute positional embeddings
 - Support for extended context windows (up to 128K tokens)
@@ -46,19 +46,19 @@ This document outlines the requirements for building a state-of-the-art Large La
 ```
 
 ### 1.3 Activation Functions ⭐ CRITICAL
-**Current State-of-the-Art:**
+#### Current State-of-the-Art
 - **SwiGLU** - Preferred activation (Llama 3, PaLM)
   - Replaces GELU/ReLU in feed-forward networks
   - Better performance and training stability
 
-**What We Need:**
+#### What We Need
 ```python
 - SwiGLU activation in FFN layers
 - Optional GLU variants for experimentation
 ```
 
 ### 1.4 Normalization ⭐ CRITICAL
-**Current State-of-the-Art:**
+#### Current State-of-the-Art
 - **Pre-Layer Normalization** (before attention/FFN)
   - Better training stability than post-norm
   - Used in all modern transformers
@@ -67,7 +67,7 @@ This document outlines the requirements for building a state-of-the-art Large La
   - Used in Llama 3, T5
   - Faster computation
 
-**What We Need:**
+#### What We Need
 ```python
 - RMSNorm as default
 - Pre-normalization architecture
@@ -75,12 +75,12 @@ This document outlines the requirements for building a state-of-the-art Large La
 ```
 
 ### 1.5 Model Architecture Variations
-**Mixture of Experts (MoE):**
+#### Mixture of Experts (MoE)
 - Sparse activation of expert networks
 - 20x more cost-effective than dense models
 - Used in Mixtral 8x7B, DeepSeek-V3, Llama-4
 
-**What We Need:**
+#### What We Need
 ```python
 - Dense model as baseline
 - Optional MoE implementation for scaling
@@ -93,12 +93,12 @@ This document outlines the requirements for building a state-of-the-art Large La
 ## 2. Tokenization ⭐ CRITICAL
 
 ### 2.1 Modern Tokenization Standards
-**Industry Standards:**
+#### Industry Standards
 - **Byte-Pair Encoding (BPE)** - Most widely used
 - **SentencePiece** - Google's implementation (Llama 2)
 - **tiktoken** - OpenAI's implementation (GPT-4, Llama 3)
 
-**Key Features Needed:**
+#### Key Features Needed
 ```python
 - BPE tokenizer implementation
 - Support for both SentencePiece and tiktoken formats
@@ -109,7 +109,7 @@ This document outlines the requirements for building a state-of-the-art Large La
 ```
 
 ### 2.2 Training Vocabulary
-**Requirements:**
+#### Requirements
 - Train custom vocab on domain-specific data
 - Handle multilingual text (UTF-8)
 - Optimal subword granularity
@@ -120,13 +120,13 @@ This document outlines the requirements for building a state-of-the-art Large La
 ## 3. Training Infrastructure ⭐ CRITICAL
 
 ### 3.1 Efficient Training Techniques
-**Memory Optimization:**
+#### Memory Optimization
 - **Gradient Checkpointing** - Trade compute for memory
 - **Mixed Precision Training (FP16/BF16)** - 2x speedup
 - **Gradient Accumulation** - Simulate larger batch sizes
 - **ZeRO Optimizer** (DeepSpeed) - Distributed training
 
-**What We Need:**
+#### What We Need
 ```python
 - Automatic Mixed Precision (AMP) support
 - Gradient checkpointing for large models
@@ -136,15 +136,15 @@ This document outlines the requirements for building a state-of-the-art Large La
 ```
 
 ### 3.2 Training Objectives
-**Primary Objective:**
+#### Primary Objective
 - Next-Token Prediction (Unsupervised)
 
-**Advanced Objectives:**
+#### Advanced Objectives
 - **Direct Preference Optimization (DPO)** - Replacing RLHF
 - **Constitutional AI** - Safety alignment
 - **Multi-task Learning** - Instruction following
 
-**What We Need:**
+#### What We Need
 ```python
 - Cross-entropy loss for next-token prediction
 - Optional DPO implementation for alignment
@@ -153,13 +153,13 @@ This document outlines the requirements for building a state-of-the-art Large La
 ```
 
 ### 3.3 Optimization
-**Optimizer:**
+#### Optimizer
 - **AdamW** - Industry standard
 - Learning rate: 1e-4 to 3e-4
 - Weight decay: 0.1
 - Beta: (0.9, 0.95)
 
-**Learning Rate Schedule:**
+#### Learning Rate Schedule
 - Warmup (1000-10000 steps)
 - Cosine decay or linear decay
 - Gradient clipping (norm = 1.0)
@@ -169,7 +169,7 @@ This document outlines the requirements for building a state-of-the-art Large La
 ## 4. Data Pipeline ⭐ CRITICAL
 
 ### 4.1 Data Preprocessing
-**Essential Steps:**
+#### Essential Steps
 ```python
 1. Text cleaning and normalization
 2. Language filtering (if multilingual)
@@ -179,17 +179,17 @@ This document outlines the requirements for building a state-of-the-art Large La
 6. PII removal
 ```
 
-**Quality Filtering Methods:**
+#### Quality Filtering Methods
 - Perplexity-based filtering
 - Classifier-based quality scoring
 - Heuristic rules (length, special chars, etc.)
 - Statistical feature filtering
 
 ### 4.2 Synthetic Data Generation
-**2024 Best Practice:**
+#### 2024 Best Practice
 > "Dataset quality over quantity: heavily filtered web data and synthetic data"
 
-**What We Need:**
+#### What We Need
 ```python
 - Synthetic data generation pipeline
 - Quality scoring (helpfulness, correctness, coherence)
@@ -198,7 +198,7 @@ This document outlines the requirements for building a state-of-the-art Large La
 ```
 
 ### 4.3 Data Loading
-**Requirements:**
+#### Requirements
 - Efficient data loading (prefetching, caching)
 - Streaming large datasets
 - Dynamic batching
@@ -209,14 +209,14 @@ This document outlines the requirements for building a state-of-the-art Large La
 ## 5. Evaluation & Benchmarking ⭐ CRITICAL
 
 ### 5.1 Automatic Metrics
-**Standard Metrics:**
+#### Standard Metrics
 ```python
 - Perplexity (lower is better)
 - Cross-entropy loss
 - Token accuracy
 ```
 
-**NLP-Specific Metrics:**
+#### NLP-Specific Metrics
 ```python
 - BLEU (translation)
 - ROUGE (summarization)
@@ -224,7 +224,7 @@ This document outlines the requirements for building a state-of-the-art Large La
 ```
 
 ### 5.2 Benchmark Suites (2024)
-**Must-Have Benchmarks:**
+#### Must-Have Benchmarks
 1. **MMLU** - 57 subjects, knowledge breadth
 2. **MMLU-Pro** - Enhanced reasoning, 10-choice questions
 3. **HumanEval** - Code generation (164 tasks)
@@ -234,7 +234,7 @@ This document outlines the requirements for building a state-of-the-art Large La
 7. **MathOdyssey** - Advanced mathematical reasoning
 8. **ToolLLM** - Real-world API interactions
 
-**What We Need:**
+#### What We Need
 ```python
 - Benchmark evaluation framework
 - Automated scoring for each benchmark
@@ -247,23 +247,23 @@ This document outlines the requirements for building a state-of-the-art Large La
 ## 6. Fine-Tuning & Adaptation ⭐ CRITICAL
 
 ### 6.1 Parameter-Efficient Fine-Tuning (PEFT)
-**LoRA (Low-Rank Adaptation):**
+#### LoRA (Low-Rank Adaptation)
 - Add trainable low-rank matrices to frozen weights
 - Typical rank: 8-64
 - Alpha: typically 2× rank
 - Apply to all weight matrices (not just Q/V)
 
-**QLoRA (Quantized LoRA):**
+#### QLoRA (Quantized LoRA)
 - 4-bit quantization of base model
 - 33% memory savings
 - NormalFloat4 (NF4) quantization
 - Paged optimizers for memory spikes
 
-**DoRA (Decomposed LoRA):**
+#### DoRA (Decomposed LoRA)
 - Decomposes weights into magnitude + direction
 - More robust to rank selection
 
-**What We Need:**
+#### What We Need
 ```python
 - LoRA implementation
 - QLoRA with 4-bit quantization
@@ -272,7 +272,7 @@ This document outlines the requirements for building a state-of-the-art Large La
 ```
 
 ### 6.2 Full Fine-Tuning
-**Requirements:**
+#### Requirements
 ```python
 - Standard supervised fine-tuning
 - Instruction tuning
@@ -285,7 +285,7 @@ This document outlines the requirements for building a state-of-the-art Large La
 ## 7. Inference & Serving
 
 ### 7.1 Generation Strategies
-**Required Methods:**
+#### Required Methods
 ```python
 - Greedy decoding
 - Beam search
@@ -297,7 +297,7 @@ This document outlines the requirements for building a state-of-the-art Large La
 ```
 
 ### 7.2 Optimization
-**Techniques:**
+#### Techniques
 ```python
 - KV cache for fast generation
 - Continuous batching
@@ -307,7 +307,7 @@ This document outlines the requirements for building a state-of-the-art Large La
 ```
 
 ### 7.3 Context Window Management
-**Requirements:**
+#### Requirements
 ```python
 - Support for long context (32K-128K tokens)
 - Context window extension techniques
@@ -401,20 +401,20 @@ xformers  # Memory-efficient attention
 
 ## 10. Training Data Requirements
 
-### 10.1 Pre-training Data
-**Scale:**
+### 10.1 Pretraining Data
+#### Scale
 - Minimum: 50B-100B tokens
 - Competitive: 1T-2T tokens
 - State-of-the-art: 10T-15T tokens (Llama 3 used 15T)
 
-**Sources:**
+#### Sources
 - Web crawl (filtered)
 - Books, papers, code
 - High-quality curated datasets
 - Synthetic data (10-20% of total)
 
 ### 10.2 Fine-Tuning Data
-**Instruction Tuning:**
+#### Instruction Tuning
 - 50K-10M instruction-response pairs
 - High-quality human annotations
 - Task diversity (QA, summarization, coding, reasoning)
