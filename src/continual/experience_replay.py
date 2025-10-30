@@ -553,7 +553,6 @@ if __name__ == "__main__":
     )
 
     # Add batch
-    batch_experiences = []
     for i in range(30):
         input_ids = torch.randint(0, 1000, (15,))
         labels = torch.randint(0, 1000, (15,))

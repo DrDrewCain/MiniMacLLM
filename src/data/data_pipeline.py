@@ -13,7 +13,7 @@ Supports:
 import re
 import json
 from pathlib import Path
-from typing import List, Dict, Optional, Iterator, Tuple, Any
+from typing import List, Dict, Optional, Iterator, Any
 from dataclasses import dataclass
 import logging
 
@@ -23,6 +23,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class Document:
     """A document with text content and metadata."""
+
     content: str
     source: str
     domain: Optional[str] = None
@@ -39,7 +40,7 @@ class Document:
 class TextLoader:
     """Load plain text files."""
 
-    SUPPORTED_EXTENSIONS = {'.txt', '.md', '.rst', '.text'}
+    SUPPORTED_EXTENSIONS = {".txt", ".md", ".rst", ".text"}
 
     @staticmethod
     def can_load(file_path: Path) -> bool:
@@ -47,17 +48,17 @@ class TextLoader:
         return file_path.suffix.lower() in TextLoader.SUPPORTED_EXTENSIONS
 
     @staticmethod
-    def load(file_path: Path, encoding: str = 'utf-8') -> Document:
+    def load(file_path: Path, encoding: str = "utf-8") -> Document:
         """Load a text file."""
         try:
-            with open(file_path, 'r', encoding=encoding, errors='replace') as f:
+            with open(file_path, "r", encoding=encoding, errors="replace") as f:
                 content = f.read()
 
             return Document(
                 content=content,
                 source=str(file_path),
                 domain="text",
-                metadata={'encoding': encoding, 'size': len(content)}
+                metadata={"encoding": encoding, "size": len(content)},
             )
         except Exception as e:
             logger.error(f"Error loading {file_path}: {e}")
@@ -68,24 +69,42 @@ class CodeLoader:
     """Load code files."""
 
     SUPPORTED_EXTENSIONS = {
-        '.py', '.js', '.java', '.cpp', '.c', '.h', '.hpp',
-        '.cs', '.go', '.rs', '.rb', '.php', '.swift', '.kt',
-        '.ts', '.jsx', '.tsx', '.scala', '.r', '.m', '.sh'
+        ".py",
+        ".js",
+        ".java",
+        ".cpp",
+        ".c",
+        ".h",
+        ".hpp",
+        ".cs",
+        ".go",
+        ".rs",
+        ".rb",
+        ".php",
+        ".swift",
+        ".kt",
+        ".ts",
+        ".jsx",
+        ".tsx",
+        ".scala",
+        ".r",
+        ".m",
+        ".sh",
     }
 
     LANGUAGE_MAP = {
-        '.py': 'python',
-        '.js': 'javascript',
-        '.ts': 'typescript',
-        '.java': 'java',
-        '.cpp': 'cpp',
-        '.c': 'c',
-        '.go': 'go',
-        '.rs': 'rust',
-        '.rb': 'ruby',
-        '.php': 'php',
-        '.swift': 'swift',
-        '.kt': 'kotlin'
+        ".py": "python",
+        ".js": "javascript",
+        ".ts": "typescript",
+        ".java": "java",
+        ".cpp": "cpp",
+        ".c": "c",
+        ".go": "go",
+        ".rs": "rust",
+        ".rb": "ruby",
+        ".php": "php",
+        ".swift": "swift",
+        ".kt": "kotlin",
     }
 
     @staticmethod
@@ -94,24 +113,24 @@ class CodeLoader:
         return file_path.suffix.lower() in CodeLoader.SUPPORTED_EXTENSIONS
 
     @staticmethod
-    def load(file_path: Path, encoding: str = 'utf-8') -> Document:
+    def load(file_path: Path, encoding: str = "utf-8") -> Document:
         """Load a code file."""
         try:
-            with open(file_path, 'r', encoding=encoding, errors='replace') as f:
+            with open(file_path, "r", encoding=encoding, errors="replace") as f:
                 content = f.read()
 
-            language = CodeLoader.LANGUAGE_MAP.get(file_path.suffix.lower(), 'unknown')
+            language = CodeLoader.LANGUAGE_MAP.get(file_path.suffix.lower(), "unknown")
 
             return Document(
                 content=content,
                 source=str(file_path),
                 domain="code",
                 metadata={
-                    'language': language,
-                    'extension': file_path.suffix,
-                    'filename': file_path.name,
-                    'size': len(content)
-                }
+                    "language": language,
+                    "extension": file_path.suffix,
+                    "filename": file_path.name,
+                    "size": len(content),
+                },
             )
         except Exception as e:
             logger.error(f"Error loading {file_path}: {e}")
@@ -121,7 +140,7 @@ class CodeLoader:
 class PDFLoader:
     """Load PDF files."""
 
-    SUPPORTED_EXTENSIONS = {'.pdf'}
+    SUPPORTED_EXTENSIONS = {".pdf"}
 
     @staticmethod
     def can_load(file_path: Path) -> bool:
@@ -175,11 +194,7 @@ class PDFLoader:
                 content=content,
                 source=str(file_path),
                 domain="document",
-                metadata={
-                    'type': 'pdf',
-                    'filename': file_path.name,
-                    'size': len(content)
-                }
+                metadata={"type": "pdf", "filename": file_path.name, "size": len(content)},
             )
 
         except Exception as e:
@@ -190,7 +205,7 @@ class PDFLoader:
 class JSONLoader:
     """Load JSON files."""
 
-    SUPPORTED_EXTENSIONS = {'.json', '.jsonl'}
+    SUPPORTED_EXTENSIONS = {".json", ".jsonl"}
 
     @staticmethod
     def can_load(file_path: Path) -> bool:
@@ -198,7 +213,7 @@ class JSONLoader:
         return file_path.suffix.lower() in JSONLoader.SUPPORTED_EXTENSIONS
 
     @staticmethod
-    def load(file_path: Path, text_field: str = 'text') -> List[Document]:
+    def load(file_path: Path, text_field: str = "text") -> List[Document]:
         """
         Load JSON file(s).
 
@@ -212,20 +227,22 @@ class JSONLoader:
         try:
             documents = []
 
-            with open(file_path, 'r', encoding='utf-8') as f:
-                if file_path.suffix == '.jsonl':
+            with open(file_path, "r", encoding="utf-8") as f:
+                if file_path.suffix == ".jsonl":
                     # JSON Lines format
                     for line_num, line in enumerate(f, 1):
                         if line.strip():
                             data = json.loads(line)
                             content = data.get(text_field, json.dumps(data))
 
-                            documents.append(Document(
-                                content=content,
-                                source=f"{file_path}:line_{line_num}",
-                                domain="json",
-                                metadata=data
-                            ))
+                            documents.append(
+                                Document(
+                                    content=content,
+                                    source=f"{file_path}:line_{line_num}",
+                                    domain="json",
+                                    metadata=data,
+                                )
+                            )
                 else:
                     # Regular JSON
                     data = json.load(f)
@@ -238,29 +255,29 @@ class JSONLoader:
                             else:
                                 content = str(item)
 
-                            documents.append(Document(
-                                content=content,
-                                source=f"{file_path}:item_{idx}",
-                                domain="json",
-                                metadata=item if isinstance(item, dict) else {}
-                            ))
+                            documents.append(
+                                Document(
+                                    content=content,
+                                    source=f"{file_path}:item_{idx}",
+                                    domain="json",
+                                    metadata=item if isinstance(item, dict) else {},
+                                )
+                            )
                     elif isinstance(data, dict):
                         # Single object
                         content = data.get(text_field, json.dumps(data))
-                        documents.append(Document(
-                            content=content,
-                            source=str(file_path),
-                            domain="json",
-                            metadata=data
-                        ))
+                        documents.append(
+                            Document(
+                                content=content, source=str(file_path), domain="json", metadata=data
+                            )
+                        )
                     else:
                         # Primitive value
-                        documents.append(Document(
-                            content=str(data),
-                            source=str(file_path),
-                            domain="json",
-                            metadata={}
-                        ))
+                        documents.append(
+                            Document(
+                                content=str(data), source=str(file_path), domain="json", metadata={}
+                            )
+                        )
 
             return documents
 
@@ -291,12 +308,7 @@ class DataPipeline:
         self.chunk_size = chunk_size
         self.min_length = min_length
 
-        self.loaders = [
-            TextLoader,
-            CodeLoader,
-            PDFLoader,
-            JSONLoader
-        ]
+        self.loaders = [TextLoader, CodeLoader, PDFLoader, JSONLoader]
 
     def load_file(self, file_path: Path) -> List[Document]:
         """
@@ -343,10 +355,7 @@ class DataPipeline:
         raise ValueError(f"No loader found for file type: {file_path.suffix}")
 
     def load_directory(
-        self,
-        dir_path: Path,
-        recursive: bool = True,
-        pattern: str = "*"
+        self, dir_path: Path, recursive: bool = True, pattern: str = "*"
     ) -> Iterator[Document]:
         """
         Load all supported files from a directory.
@@ -427,21 +436,23 @@ class DataPipeline:
             # Try to break at sentence boundary
             if end < len(content):
                 # Look for sentence endings
-                last_period = chunk_text.rfind('. ')
-                last_newline = chunk_text.rfind('\n')
+                last_period = chunk_text.rfind(". ")
+                last_newline = chunk_text.rfind("\n")
                 break_point = max(last_period, last_newline)
 
                 if break_point > self.chunk_size // 2:  # Only break if not too early
-                    chunk_text = chunk_text[:break_point + 1]
+                    chunk_text = chunk_text[: break_point + 1]
                     end = start + break_point + 1
 
             if len(chunk_text) >= self.min_length:
-                chunks.append(Document(
-                    content=chunk_text.strip(),
-                    source=f"{doc.source}:chunk_{len(chunks)}",
-                    domain=doc.domain,
-                    metadata={**doc.metadata, 'is_chunk': True, 'chunk_index': len(chunks)}
-                ))
+                chunks.append(
+                    Document(
+                        content=chunk_text.strip(),
+                        source=f"{doc.source}:chunk_{len(chunks)}",
+                        domain=doc.domain,
+                        metadata={**doc.metadata, "is_chunk": True, "chunk_index": len(chunks)},
+                    )
+                )
 
             start = end - overlap
 
@@ -463,10 +474,10 @@ class DataPreprocessor:
             Cleaned text
         """
         # Remove excessive whitespace
-        text = re.sub(r'\s+', ' ', text)
+        text = re.sub(r"\s+", " ", text)
 
         # Remove very long runs of special characters
-        text = re.sub(r'([^\w\s])\1{5,}', r'\1\1', text)
+        text = re.sub(r"([^\w\s])\1{5,}", r"\1\1", text)
 
         # Strip leading/trailing whitespace
         text = text.strip()
@@ -477,7 +488,8 @@ class DataPreprocessor:
     def normalize_unicode(text: str) -> str:
         """Normalize unicode characters."""
         import unicodedata
-        return unicodedata.normalize('NFKC', text)
+
+        return unicodedata.normalize("NFKC", text)
 
     @staticmethod
     def filter_quality(doc: Document, min_alpha_ratio: float = 0.5) -> bool:
@@ -518,7 +530,7 @@ def load_documents(
     paths: List[Path],
     chunk_size: Optional[int] = None,
     clean: bool = True,
-    filter_quality: bool = True
+    filter_quality: bool = True,
 ) -> List[Document]:
     """
     Convenience function to load documents from multiple paths.

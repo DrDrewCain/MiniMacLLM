@@ -219,7 +219,6 @@ if __name__ == "__main__":
 
     # Compare with standard FFN
     ffn = FeedForward(d_model, d_ff, dropout=0.1)
-    y_ffn = ffn(x)
     ffn_params = sum(p.numel() for p in ffn.parameters())
 
     print(f"\nStandard FFN parameters: {ffn_params:,}")

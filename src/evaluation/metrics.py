@@ -555,10 +555,6 @@ if __name__ == "__main__":
     # Example usage
     print("Testing evaluation metrics...")
 
-    # Test perplexity
-    dummy_logits = torch.randn(1, 10, 1000)  # [batch, seq_len, vocab]
-    dummy_labels = torch.randint(0, 1000, (1, 10))
-
     print("\n✓ Metrics module ready!")
     print("  - Perplexity computation")
     print("  - Forgetting rate measurement")

@@ -342,10 +342,15 @@ class Evaluator:
         with open(path, "r") as f:
             data = json.load(f)
 
-        # Reconstruct history
-        # (simplified - would need full reconstruction of objects)
+        # TODO: Reconstruct history from data
+        # This would require full reconstruction of EvaluationResult objects
+        # For now, just verify the data structure
+        if "history" not in data or "domain_history" not in data:
+            raise ValueError(f"Invalid history file format: {path}")
+
         if self.config.verbose:
             print(f"✓ Loaded evaluation history from {path}")
+            print(f"  Found {len(data['history'])} evaluation records")
 
     def get_learning_curve(
         self, domain: Optional[str] = None, metric: str = "perplexity"

@@ -14,7 +14,6 @@ import shutil
 from pathlib import Path
 
 from src.model.llm import ContinualLLM, ModelConfig
-from src.lora.lora_model import LoRAConfig
 from src.continual.continual_trainer import ContinualLearner, ContinualLearningConfig, Experience
 
 
@@ -226,6 +225,9 @@ class TestAntiForgetting:
 
         # With EWC, we should have an EWC loss component
         assert "ewc_loss" in metrics_with
+        # Without EWC, there should be no EWC loss
+        assert "ewc_loss" not in metrics_without or metrics_without["ewc_loss"] == 0
+
         if learner_with.ewc and learner_with.ewc.fisher:
             # EWC loss might be 0 on first learning, but key should exist
             assert metrics_with["ewc_loss"] >= 0

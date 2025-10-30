@@ -214,8 +214,10 @@ class ContinualLearner:
         Returns:
             Dictionary with loss statistics
         """
-        # Add to replay buffer
-        added = self.replay_buffer.add_batch(batch, auto_importance=False)
+        # Add experiences to replay buffer
+        for experience in batch:
+            self.replay_buffer.add(experience)
+
         self.stats["total_examples_in_buffer"] = len(self.replay_buffer)
 
         if update_immediately:
