@@ -126,7 +126,7 @@ def main():
                 # Remove 'base_model.' prefix and '.base_layer' if present
                 clean_key = key[len('base_model.'):]  # Remove 'base_model.'
                 if '.base_layer.' in clean_key:
-                    clean_key = clean_key.replace('.base_layer', '')
+                    clean_key = clean_key.replace('.base_layer.', '')
                 base_state_dict[clean_key] = value
 
         base_model.load_state_dict(base_state_dict, strict=False)
