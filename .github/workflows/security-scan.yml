@@ -34,7 +34,7 @@ jobs:
         bandit -r src/ scripts/ -f txt -o bandit-report.txt || true
 
     - name: Upload Bandit results
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       if: always()
       with:
         name: bandit-results
@@ -87,7 +87,7 @@ jobs:
         safety check --output safety-report.txt || true
 
     - name: Upload Safety results
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       if: always()
       with:
         name: safety-results
@@ -134,7 +134,7 @@ jobs:
                 src/ scripts/ || true
 
     - name: Upload Semgrep results
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       if: always()
       with:
         name: semgrep-results
