@@ -178,7 +178,7 @@ We appreciate the security research community and will acknowledge reporters who
 ## Contact
 
 - **Security Email**: hello@voxmatch.org
-- **GitHub Security Advisories**: [Enable in repo settings]
+- **GitHub Security Advisories**:
 - **Bug Bounty**: Currently not offered, but we appreciate responsible disclosure
 
 ---
