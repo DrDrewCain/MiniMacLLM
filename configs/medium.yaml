@@ -1,0 +1,33 @@
+# Medium Model Configuration (~200M parameters)
+# Production-ready for continual learning
+
+# Model Architecture
+vocab_size: 32000
+d_model: 768
+num_layers: 12
+num_query_heads: 12
+num_kv_heads: 3  # 4:1 GQA ratio
+d_ff: 3072
+max_seq_len: 2048
+
+# Regularization
+dropout: 0.0  # No dropout for medium+ models
+attention_dropout: 0.0
+
+# Normalization
+norm_type: "rmsnorm"
+norm_eps: 1.0e-6
+
+# Feed-Forward
+ff_type: "swiglu"
+
+# Position Embeddings
+rope_base: 10000.0
+
+# Output
+bias: false
+tie_embeddings: true
+
+# Estimated Parameters: ~200M
+# Memory: ~800MB (fp32), ~400MB (fp16)
+# Recommended for: Production, continual learning, Apple Silicon

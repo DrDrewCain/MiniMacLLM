@@ -1,0 +1,108 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environments
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+.conda/
+
+# PyCharm
+.idea/
+
+# VS Code
+.vscode/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+*.ipynb
+
+# pytest
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Model checkpoints and training artifacts
+checkpoints/**/*.pt
+checkpoints/**/*.pth
+checkpoints/**/*.ckpt
+checkpoints/**/*.bin
+checkpoints/**/*.safetensors
+*.pt
+*.pth
+*.ckpt
+!configs/*.yaml
+
+# Keep checkpoint structure but ignore model files
+!checkpoints/README.md
+
+# Tokenizers (keep configs, ignore trained models)
+data/tokenizers/**/*.json
+data/tokenizers/**/*.model
+data/tokenizers/**/*.vocab
+
+# Training data (too large for git)
+data/raw/*.txt
+data/raw/*.json
+data/raw/*.csv
+data/processed/*.txt
+data/processed/*.json
+data/processed/*.csv
+data/continual_learning/*.txt
+
+# Keep example/sample data
+!data/raw/sample.txt
+!data/raw/README.md
+
+# Logs
+logs/
+*.log
+wandb/
+runs/
+
+# OS
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Large model files
+*.h5
+*.pkl
+*.pickle
+
+# Environment variables
+.env
+.env.local
+
+# IDE
+*.sublime-*
+.vscode/

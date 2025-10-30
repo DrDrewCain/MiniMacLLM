@@ -1,0 +1,33 @@
+# Small Model Configuration (~50M parameters)
+# For development, testing, and quick experiments
+
+# Model Architecture
+vocab_size: 32000
+d_model: 512
+num_layers: 6
+num_query_heads: 8
+num_kv_heads: 2  # 4:1 GQA ratio
+d_ff: 2048
+max_seq_len: 2048
+
+# Regularization
+dropout: 0.1
+attention_dropout: 0.1
+
+# Normalization
+norm_type: "rmsnorm"
+norm_eps: 1.0e-6
+
+# Feed-Forward
+ff_type: "swiglu"
+
+# Position Embeddings
+rope_base: 10000.0
+
+# Output
+bias: false
+tie_embeddings: true
+
+# Estimated Parameters: ~50M
+# Memory: ~200MB (fp32), ~100MB (fp16)
+# Recommended for: Development, testing, CPU/small GPU

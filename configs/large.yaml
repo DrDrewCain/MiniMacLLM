@@ -1,0 +1,33 @@
+# Large Model Configuration (~500M parameters)
+# High-quality for specialized tasks
+
+# Model Architecture
+vocab_size: 32000
+d_model: 1024
+num_layers: 16
+num_query_heads: 16
+num_kv_heads: 4  # 4:1 GQA ratio
+d_ff: 4096
+max_seq_len: 4096  # Longer context
+
+# Regularization
+dropout: 0.0
+attention_dropout: 0.0
+
+# Normalization
+norm_type: "rmsnorm"
+norm_eps: 1.0e-5
+
+# Feed-Forward
+ff_type: "swiglu"
+
+# Position Embeddings
+rope_base: 10000.0
+
+# Output
+bias: false
+tie_embeddings: true
+
+# Estimated Parameters: ~500M
+# Memory: ~2GB (fp32), ~1GB (fp16)
+# Recommended for: High-quality specialized models, powerful hardware
