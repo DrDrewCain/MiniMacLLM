@@ -1,9 +1,11 @@
 # MiniMacLLM
 
+![CodeRabbit Pull Request Reviews](https://img.shields.io/coderabbit/prs/github/DrDrewCain/MiniMacLLM?utm_source=oss&utm_medium=github&utm_campaign=DrDrewCain%2FMiniMacLLM&labelColor=171717&color=FF570A&link=https%3A%2F%2Fcoderabbit.ai&label=CodeRabbit+Reviews)
+
 **A continual learning LLM designed to outperform ChatGPT-3.5 on specialized tasks with 1000x fewer parameters**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
+[![Python 3.12+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
 [![Apple Silicon](https://img.shields.io/badge/Apple%20Silicon-Optimized-black.svg)](https://www.apple.com/mac/)
 
 ---
