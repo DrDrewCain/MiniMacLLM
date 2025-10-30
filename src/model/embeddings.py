@@ -8,7 +8,6 @@ Implements:
 
 import torch
 import torch.nn as nn
-import math
 from typing import Tuple, Optional
 
 
@@ -38,7 +37,7 @@ class RotaryPositionEmbedding(nn.Module):
         dim: int,
         max_seq_len: int = 2048,
         base: float = 10000.0,
-        device: Optional[torch.device] = None
+        device: Optional[torch.device] = None,
     ):
         super().__init__()
         self.dim = dim
@@ -78,7 +77,9 @@ class RotaryPositionEmbedding(nn.Module):
         self.register_buffer("cos_cached", emb.cos(), persistent=False)
         self.register_buffer("sin_cached", emb.sin(), persistent=False)
 
-    def forward(self, seq_len: int, device: Optional[torch.device] = None) -> Tuple[torch.Tensor, torch.Tensor]:
+    def forward(
+        self, seq_len: int, device: Optional[torch.device] = None
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
         """
         Get cos and sin embeddings for a given sequence length.
 
@@ -95,17 +96,11 @@ class RotaryPositionEmbedding(nn.Module):
             self.max_seq_len = seq_len
 
         # Return cached values for the requested length
-        return (
-            self.cos_cached[:seq_len].to(device),
-            self.sin_cached[:seq_len].to(device)
-        )
+        return (self.cos_cached[:seq_len].to(device), self.sin_cached[:seq_len].to(device))
 
 
 def apply_rotary_pos_emb(
-    q: torch.Tensor,
-    k: torch.Tensor,
-    cos: torch.Tensor,
-    sin: torch.Tensor
+    q: torch.Tensor, k: torch.Tensor, cos: torch.Tensor, sin: torch.Tensor
 ) -> Tuple[torch.Tensor, torch.Tensor]:
     """
     Apply rotary position embeddings to query and key tensors.
@@ -195,9 +190,7 @@ class LearnedPositionEmbedding(nn.Module):
             Position embeddings of shape (seq_len, d_model)
         """
         if seq_len > self.max_seq_len:
-            raise ValueError(
-                f"Sequence length {seq_len} exceeds maximum {self.max_seq_len}"
-            )
+            raise ValueError(f"Sequence length {seq_len} exceeds maximum {self.max_seq_len}")
 
         positions = torch.arange(seq_len, device=device)
         return self.embedding(positions)

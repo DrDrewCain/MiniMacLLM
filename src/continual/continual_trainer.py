@@ -17,13 +17,12 @@ Enables:
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from typing import Optional, Dict, List, Tuple
+from typing import Optional, Dict, List
 from dataclasses import dataclass, field
 from pathlib import Path
-import time
-from tqdm import tqdm
 
-from .experience_replay import ExperienceReplayBuffer, Experience, StreamingReplayBuffer
+
+from .experience_replay import Experience, StreamingReplayBuffer
 from .ewc import EWC, EWCConfig
 from ..lora.lora_model import LoRAModel
 from ..lora.lora_layer import LoRAConfig
@@ -64,13 +63,14 @@ class ContinualLearningConfig:
         # Device
         device: Device to train on ("cpu", "cuda", "mps")
     """
+
     # LoRA
     lora_r: int = 16
     lora_alpha: float = 32.0
     lora_dropout: float = 0.0
-    lora_target_modules: List[str] = field(default_factory=lambda: [
-        "q_proj", "k_proj", "v_proj", "o_proj", "w1", "w2", "w3"
-    ])
+    lora_target_modules: List[str] = field(
+        default_factory=lambda: ["q_proj", "k_proj", "v_proj", "o_proj", "w1", "w2", "w3"]
+    )
 
     # Experience Replay
     replay_buffer_size: int = 10000
@@ -140,7 +140,7 @@ class ContinualLearner:
         base_model: nn.Module,
         config: ContinualLearningConfig,
         tokenizer=None,
-        adapter_name: str = "default"
+        adapter_name: str = "default",
     ):
         self.config = config
         self.adapter_name = adapter_name
@@ -155,7 +155,7 @@ class ContinualLearner:
             r=config.lora_r,
             alpha=config.lora_alpha,
             dropout=config.lora_dropout,
-            target_modules=config.lora_target_modules
+            target_modules=config.lora_target_modules,
         )
 
         self.model = LoRAModel(base_model, lora_config, adapter_name)
@@ -169,15 +169,14 @@ class ContinualLearner:
             max_size=config.replay_buffer_size,
             sampling_strategy=config.replay_strategy,
             recent_window=config.replay_buffer_size // 10,  # 10% recent
-            device=str(self.device)
+            device=str(self.device),
         )
 
         # EWC
         self.ewc = None
         if config.use_ewc:
             ewc_config = EWCConfig(
-                lambda_ewc=config.ewc_lambda,
-                fisher_samples=config.ewc_fisher_samples
+                lambda_ewc=config.ewc_lambda, fisher_samples=config.ewc_fisher_samples
             )
             self.ewc = EWC(self.model, ewc_config, device=str(self.device))
 
@@ -185,7 +184,7 @@ class ContinualLearner:
         self.optimizer = torch.optim.AdamW(
             self.model.get_trainable_parameters(),
             lr=config.learning_rate,
-            weight_decay=config.weight_decay
+            weight_decay=config.weight_decay,
         )
 
         # Training state
@@ -194,18 +193,16 @@ class ContinualLearner:
 
         # Statistics
         self.stats = {
-            'total_updates': 0,
-            'total_examples_seen': 0,
-            'total_examples_in_buffer': 0,
-            'task_losses': [],
-            'ewc_penalties': [],
-            'consolidations': 0
+            "total_updates": 0,
+            "total_examples_seen": 0,
+            "total_examples_in_buffer": 0,
+            "task_losses": [],
+            "ewc_penalties": [],
+            "consolidations": 0,
         }
 
     def learn_from_batch(
-        self,
-        batch: List[Experience],
-        update_immediately: bool = True
+        self, batch: List[Experience], update_immediately: bool = True
     ) -> Dict[str, float]:
         """
         Learn from a batch of new experiences.
@@ -219,7 +216,7 @@ class ContinualLearner:
         """
         # Add to replay buffer
         added = self.replay_buffer.add_batch(batch, auto_importance=False)
-        self.stats['total_examples_in_buffer'] = len(self.replay_buffer)
+        self.stats["total_examples_in_buffer"] = len(self.replay_buffer)
 
         if update_immediately:
             return self.update_step()
@@ -251,7 +248,7 @@ class ContinualLearner:
         combined_batch = new_batch + replay_batch
 
         if not combined_batch:
-            return {'task_loss': 0.0, 'ewc_loss': 0.0, 'total_loss': 0.0}
+            return {"task_loss": 0.0, "ewc_loss": 0.0, "total_loss": 0.0}
 
         # Prepare batch tensors - pad to same length
         max_len = max(exp.input_ids.size(0) for exp in combined_batch)
@@ -263,14 +260,28 @@ class ContinualLearner:
             # Pad input_ids
             pad_len = max_len - exp.input_ids.size(0)
             if pad_len > 0:
-                padded_input = torch.cat([exp.input_ids, torch.zeros(pad_len, dtype=exp.input_ids.dtype, device=exp.input_ids.device)])
+                padded_input = torch.cat(
+                    [
+                        exp.input_ids,
+                        torch.zeros(
+                            pad_len, dtype=exp.input_ids.dtype, device=exp.input_ids.device
+                        ),
+                    ]
+                )
             else:
                 padded_input = exp.input_ids
             input_ids_list.append(padded_input)
 
             # Pad labels
             if pad_len > 0:
-                padded_labels = torch.cat([exp.labels, torch.full((pad_len,), -1, dtype=exp.labels.dtype, device=exp.labels.device)])
+                padded_labels = torch.cat(
+                    [
+                        exp.labels,
+                        torch.full(
+                            (pad_len,), -1, dtype=exp.labels.dtype, device=exp.labels.device
+                        ),
+                    ]
+                )
             else:
                 padded_labels = exp.labels
             labels_list.append(padded_labels)
@@ -287,9 +298,7 @@ class ContinualLearner:
         shift_labels = labels[..., 1:].contiguous()
 
         task_loss = F.cross_entropy(
-            shift_logits.view(-1, shift_logits.size(-1)),
-            shift_labels.view(-1),
-            ignore_index=-1
+            shift_logits.view(-1, shift_logits.size(-1)), shift_labels.view(-1), ignore_index=-1
         )
 
         # Add EWC penalty
@@ -308,33 +317,40 @@ class ContinualLearner:
         if (self.global_step + 1) % self.config.gradient_accumulation_steps == 0:
             # Clip gradients
             torch.nn.utils.clip_grad_norm_(
-                self.model.get_trainable_parameters(),
-                self.config.max_grad_norm
+                self.model.get_trainable_parameters(), self.config.max_grad_norm
             )
 
             # Optimizer step
             self.optimizer.step()
             self.optimizer.zero_grad()
 
-            self.stats['total_updates'] += 1
+            self.stats["total_updates"] += 1
 
         self.global_step += 1
 
         # Check if need consolidation
         steps_since_consolidation = self.global_step - self.last_consolidation_step
-        if (self.config.consolidation_frequency > 0 and
-            steps_since_consolidation >= self.config.consolidation_frequency):
+        if (
+            self.config.consolidation_frequency > 0
+            and steps_since_consolidation >= self.config.consolidation_frequency
+        ):
             self.consolidate_knowledge()
 
         # Update statistics
-        self.stats['task_losses'].append(task_loss.item())
-        self.stats['ewc_penalties'].append(ewc_loss.item() if isinstance(ewc_loss, torch.Tensor) else ewc_loss)
+        self.stats["task_losses"].append(task_loss.item())
+        self.stats["ewc_penalties"].append(
+            ewc_loss.item() if isinstance(ewc_loss, torch.Tensor) else ewc_loss
+        )
 
         return {
-            'task_loss': task_loss.item(),
-            'ewc_loss': ewc_loss.item() if isinstance(ewc_loss, torch.Tensor) else ewc_loss,
-            'total_loss': (task_loss + ewc_loss).item() if isinstance(ewc_loss, torch.Tensor) else task_loss.item(),
-            'global_step': self.global_step
+            "task_loss": task_loss.item(),
+            "ewc_loss": ewc_loss.item() if isinstance(ewc_loss, torch.Tensor) else ewc_loss,
+            "total_loss": (
+                (task_loss + ewc_loss).item()
+                if isinstance(ewc_loss, torch.Tensor)
+                else task_loss.item()
+            ),
+            "global_step": self.global_step,
         }
 
     def consolidate_knowledge(self):
@@ -351,7 +367,7 @@ class ContinualLearner:
         # Sample data for Fisher computation
         consolidation_batch = self.replay_buffer.sample(
             batch_size=self.config.consolidation_samples,
-            importance_weighted=False  # Uniform for Fisher
+            importance_weighted=False,  # Uniform for Fisher
         )
 
         if not consolidation_batch:
@@ -366,8 +382,8 @@ class ContinualLearner:
             def __iter__(self):
                 for exp in self.experiences:
                     yield {
-                        'input_ids': exp.input_ids.unsqueeze(0),
-                        'labels': exp.labels.unsqueeze(0)
+                        "input_ids": exp.input_ids.unsqueeze(0),
+                        "labels": exp.labels.unsqueeze(0),
                     }
 
             def __len__(self):
@@ -377,21 +393,16 @@ class ContinualLearner:
 
         # Compute Fisher
         self.ewc.compute_fisher_information(
-            self.model,
-            dataset,
-            max_samples=self.config.consolidation_samples
+            self.model, dataset, max_samples=self.config.consolidation_samples
         )
 
         self.last_consolidation_step = self.global_step
-        self.stats['consolidations'] += 1
+        self.stats["consolidations"] += 1
 
         print(f"Knowledge consolidated! (Total consolidations: {self.stats['consolidations']})")
 
     def learn_from_text(
-        self,
-        text: str,
-        domain: Optional[str] = None,
-        importance: float = 1.0
+        self, text: str, domain: Optional[str] = None, importance: float = 1.0
     ) -> Dict[str, float]:
         """
         Learn from raw text input (convenience method).
@@ -416,10 +427,7 @@ class ContinualLearner:
         labels = torch.tensor(tokens[1:], dtype=torch.long)
 
         experience = Experience(
-            input_ids=input_ids,
-            labels=labels,
-            importance=importance,
-            domain=domain
+            input_ids=input_ids, labels=labels, importance=importance, domain=domain
         )
 
         # Learn
@@ -433,7 +441,7 @@ class ContinualLearner:
         max_length: int = None,  # Alias for compatibility
         temperature: float = 0.8,
         top_k: Optional[int] = 40,
-        top_p: Optional[float] = 0.9
+        top_p: Optional[float] = 0.9,
     ) -> str:
         """
         Generate text using the continually learned model.
@@ -463,7 +471,9 @@ class ContinualLearner:
         self.model.eval()
 
         # Tokenize prompt
-        input_ids = torch.tensor([self.tokenizer.encode(prompt)], dtype=torch.long, device=self.device)
+        input_ids = torch.tensor(
+            [self.tokenizer.encode(prompt)], dtype=torch.long, device=self.device
+        )
 
         # Generate
         generated_ids = self.model.base_model.generate(
@@ -471,7 +481,7 @@ class ContinualLearner:
             max_new_tokens=max_new_tokens,
             temperature=temperature,
             top_k=top_k,
-            top_p=top_p
+            top_p=top_p,
         )
 
         # Decode
@@ -507,8 +517,8 @@ class ContinualLearner:
 
         # Save full model state (for complete checkpoint) including config
         checkpoint = {
-            'state_dict': self.model.state_dict(),
-            'config': self.model.base_model.config.__dict__  # Save model architecture config
+            "state_dict": self.model.state_dict(),
+            "config": self.model.base_model.config.__dict__,  # Save model architecture config
         }
         torch.save(checkpoint, save_path / "model.pt")
 
@@ -517,7 +527,8 @@ class ContinualLearner:
 
         # Save continual learning config as JSON
         import json
-        with open(save_path / "config.json", 'w') as f:
+
+        with open(save_path / "config.json", "w") as f:
             json.dump(self.config.__dict__, f, indent=2)
 
         # Save replay buffer
@@ -529,11 +540,11 @@ class ContinualLearner:
 
         # Save training state
         training_state = {
-            'global_step': self.global_step,
-            'last_consolidation_step': self.last_consolidation_step,
-            'optimizer_state_dict': self.optimizer.state_dict(),
-            'stats': self.stats,
-            'config': self.config.__dict__
+            "global_step": self.global_step,
+            "last_consolidation_step": self.last_consolidation_step,
+            "optimizer_state_dict": self.optimizer.state_dict(),
+            "stats": self.stats,
+            "config": self.config.__dict__,
         }
         torch.save(training_state, save_path / "training_state.pt")
 
@@ -553,8 +564,8 @@ class ContinualLearner:
             try:
                 checkpoint = torch.load(load_path / "model.pt", map_location=self.device)
                 # Handle both old format (dict with state_dict) and new format (dict with state_dict + config)
-                if isinstance(checkpoint, dict) and 'state_dict' in checkpoint:
-                    state_dict = checkpoint['state_dict']
+                if isinstance(checkpoint, dict) and "state_dict" in checkpoint:
+                    state_dict = checkpoint["state_dict"]
                 else:
                     # Old format - checkpoint is directly the state_dict
                     state_dict = checkpoint
@@ -581,40 +592,43 @@ class ContinualLearner:
         # Load training state
         if (load_path / "training_state.pt").exists():
             training_state = torch.load(load_path / "training_state.pt", map_location=self.device)
-            self.global_step = training_state['global_step']
-            self.last_consolidation_step = training_state['last_consolidation_step']
-            self.optimizer.load_state_dict(training_state['optimizer_state_dict'])
-            self.stats = training_state['stats']
+            self.global_step = training_state["global_step"]
+            self.last_consolidation_step = training_state["last_consolidation_step"]
+            self.optimizer.load_state_dict(training_state["optimizer_state_dict"])
+            self.stats = training_state["stats"]
 
         print(f"Checkpoint loaded from {load_dir}")
 
     def get_stats(self) -> Dict:
         """Get training statistics."""
-        recent_loss = (sum(self.stats['task_losses'][-100:]) / len(self.stats['task_losses'][-100:])
-                      if self.stats['task_losses'] else 0.0)
+        recent_loss = (
+            sum(self.stats["task_losses"][-100:]) / len(self.stats["task_losses"][-100:])
+            if self.stats["task_losses"]
+            else 0.0
+        )
 
         return {
             **self.stats,
-            'global_step': self.global_step,
-            'recent_avg_loss': recent_loss,
-            'replay_buffer_size': len(self.replay_buffer),
-            'replay_buffer_domains': self.replay_buffer.get_domain_distribution()
+            "global_step": self.global_step,
+            "recent_avg_loss": recent_loss,
+            "replay_buffer_size": len(self.replay_buffer),
+            "replay_buffer_domains": self.replay_buffer.get_domain_distribution(),
         }
 
     def print_stats(self):
         """Print training statistics."""
         stats = self.get_stats()
 
-        print("\n" + "="*60)
+        print("\n" + "=" * 60)
         print("Continual Learning Statistics")
-        print("="*60)
+        print("=" * 60)
         print(f"Global step: {stats['global_step']}")
         print(f"Total updates: {stats['total_updates']}")
         print(f"Consolidations: {stats['consolidations']}")
         print(f"Recent avg loss: {stats['recent_avg_loss']:.4f}")
         print(f"Replay buffer: {stats['replay_buffer_size']}/{self.config.replay_buffer_size}")
         print(f"Domains: {stats['replay_buffer_domains']}")
-        print("="*60 + "\n")
+        print("=" * 60 + "\n")
 
 
 if __name__ == "__main__":

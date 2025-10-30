@@ -75,7 +75,7 @@ def interactive_mode(model, tokenizer, device, generation_kwargs):
                     temp = float(prompt.split()[1])
                     generation_kwargs['temperature'] = temp
                     print(f"✓ Temperature set to {temp}")
-                except:
+                except (ValueError, IndexError):
                     print("✗ Invalid temperature")
                 continue
 
@@ -84,7 +84,7 @@ def interactive_mode(model, tokenizer, device, generation_kwargs):
                     tokens = int(prompt.split()[1])
                     generation_kwargs['max_new_tokens'] = tokens
                     print(f"✓ Max tokens set to {tokens}")
-                except:
+                except (ValueError, IndexError):
                     print("✗ Invalid token count")
                 continue
 
@@ -93,7 +93,7 @@ def interactive_mode(model, tokenizer, device, generation_kwargs):
                     topk = int(prompt.split()[1])
                     generation_kwargs['top_k'] = topk
                     print(f"✓ Top-k set to {topk}")
-                except:
+                except (ValueError, IndexError):
                     print("✗ Invalid top-k")
                 continue
 
@@ -102,7 +102,7 @@ def interactive_mode(model, tokenizer, device, generation_kwargs):
                     topp = float(prompt.split()[1])
                     generation_kwargs['top_p'] = topp
                     print(f"✓ Top-p set to {topp}")
-                except:
+                except (ValueError, IndexError):
                     print("✗ Invalid top-p")
                 continue
 

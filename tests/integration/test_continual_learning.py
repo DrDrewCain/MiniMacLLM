@@ -15,14 +15,7 @@ from pathlib import Path
 
 from src.model.llm import ContinualLLM, ModelConfig
 from src.lora.lora_model import LoRAConfig
-from src.continual.continual_trainer import (
-    ContinualLearner,
-    ContinualLearningConfig,
-    Experience
-)
-from src.continual.experience_replay import ExperienceReplayBuffer
-from src.continual.ewc import EWC, EWCConfig
-from src.evaluation.evaluator import Evaluator, EvaluationConfig
+from src.continual.continual_trainer import ContinualLearner, ContinualLearningConfig, Experience
 
 
 class SimpleTokenizer:
@@ -57,7 +50,7 @@ def small_model():
         d_ff=512,
         max_seq_len=128,
         dropout=0.0,
-        attention_dropout=0.0
+        attention_dropout=0.0,
     )
     return ContinualLLM(config)
 
@@ -81,7 +74,7 @@ def continual_config():
         learning_rate=1e-4,
         batch_size=2,
         device="cpu",
-        consolidation_frequency=50
+        consolidation_frequency=50,
     )
 
 
@@ -112,20 +105,16 @@ class TestContinualLearningBasics:
         text = "The quick brown fox jumps over the lazy dog"
         metrics = learner.learn_from_text(text, domain="test", importance=1.0)
 
-        assert 'total_loss' in metrics
-        assert 'ewc_loss' in metrics
-        assert isinstance(metrics['total_loss'], float)
+        assert "total_loss" in metrics
+        assert "ewc_loss" in metrics
+        assert isinstance(metrics["total_loss"], float)
 
     def test_experience_buffer_storage(self, small_model, tokenizer, continual_config):
         """Test that experiences are stored in replay buffer."""
         learner = ContinualLearner(small_model, continual_config, tokenizer)
 
         # Learn from multiple texts
-        texts = [
-            "First text to learn",
-            "Second text to learn",
-            "Third text to learn"
-        ]
+        texts = ["First text to learn", "Second text to learn", "Third text to learn"]
 
         for text in texts:
             learner.learn_from_text(text, domain="test")
@@ -147,15 +136,15 @@ class TestContinualLearningBasics:
                 input_ids=torch.tensor(tokens[:-1]),
                 labels=torch.tensor(tokens[1:]),
                 importance=1.0,
-                domain="test"
+                domain="test",
             )
             experiences.append(exp)
 
         # Learn from batch
         metrics = learner.learn_from_batch(experiences)
 
-        assert 'total_loss' in metrics
-        assert metrics['total_loss'] >= 0
+        assert "total_loss" in metrics
+        assert metrics["total_loss"] >= 0
 
 
 class TestMultiDomainLearning:
@@ -169,7 +158,7 @@ class TestMultiDomainLearning:
         math_texts = [
             "Two plus two equals four",
             "Three times five equals fifteen",
-            "The square root of nine is three"
+            "The square root of nine is three",
         ]
 
         for text in math_texts:
@@ -179,7 +168,7 @@ class TestMultiDomainLearning:
         code_texts = [
             "def function takes arguments",
             "return statement exits function",
-            "for loop iterates over items"
+            "for loop iterates over items",
         ]
 
         for text in code_texts:
@@ -187,7 +176,7 @@ class TestMultiDomainLearning:
 
         # Check that both domains are in the buffer
         buffer_domains = set()
-        for exp in learner.replay_buffer.buffer[:learner.replay_buffer.size]:
+        for exp in learner.replay_buffer.buffer[: learner.replay_buffer.size]:
             if exp.domain:
                 buffer_domains.add(exp.domain)
 
@@ -223,7 +212,7 @@ class TestAntiForgetting:
             use_ewc=False,  # Disabled
             learning_rate=1e-4,
             batch_size=2,
-            device="cpu"
+            device="cpu",
         )
 
         learner_with = ContinualLearner(small_model, config_with_ewc, tokenizer)
@@ -236,10 +225,10 @@ class TestAntiForgetting:
         metrics_without = learner_without.learn_from_text(text, domain="test")
 
         # With EWC, we should have an EWC loss component
-        assert 'ewc_loss' in metrics_with
+        assert "ewc_loss" in metrics_with
         if learner_with.ewc and learner_with.ewc.fisher:
             # EWC loss might be 0 on first learning, but key should exist
-            assert metrics_with['ewc_loss'] >= 0
+            assert metrics_with["ewc_loss"] >= 0
 
     def test_replay_buffer_prevents_forgetting(self, small_model, tokenizer, continual_config):
         """Test that replay buffer helps retain old knowledge."""
@@ -297,7 +286,9 @@ class TestCheckpointManagement:
         # Check that replay buffer was restored
         assert learner2.replay_buffer.size == learner1.replay_buffer.size
 
-    def test_checkpoint_preserves_learning(self, small_model, tokenizer, continual_config, temp_dir):
+    def test_checkpoint_preserves_learning(
+        self, small_model, tokenizer, continual_config, temp_dir
+    ):
         """Test that checkpoint preserves learned knowledge."""
         learner1 = ContinualLearner(small_model, continual_config, tokenizer)
 
@@ -316,10 +307,17 @@ class TestCheckpointManagement:
         learner1.save_checkpoint(str(save_path))
 
         # Load into new learner
-        new_model = ContinualLLM(ModelConfig(
-            vocab_size=1000, d_model=128, num_layers=2,
-            num_query_heads=4, num_kv_heads=2, d_ff=512, max_seq_len=128
-        ))
+        new_model = ContinualLLM(
+            ModelConfig(
+                vocab_size=1000,
+                d_model=128,
+                num_layers=2,
+                num_query_heads=4,
+                num_kv_heads=2,
+                d_ff=512,
+                max_seq_len=128,
+            )
+        )
         learner2 = ContinualLearner(new_model, continual_config, tokenizer)
         learner2.load_checkpoint(str(save_path))
 
@@ -381,7 +379,7 @@ class TestNumericalStability:
             "First text to learn from",
             "Second different text",
             "Third text with more words in it",
-            "Fourth text is also longer than the others"
+            "Fourth text is also longer than the others",
         ]
 
         for text in texts:
@@ -390,8 +388,12 @@ class TestNumericalStability:
             # Check metrics don't have NaN or Inf
             for k, v in metrics.items():
                 if isinstance(v, (int, float)):
-                    assert not torch.isnan(torch.tensor(v)).any(), f"NaN detected in metric '{k}': {v}"
-                    assert not torch.isinf(torch.tensor(v)).any(), f"Inf detected in metric '{k}': {v}"
+                    assert not torch.isnan(
+                        torch.tensor(v)
+                    ).any(), f"NaN detected in metric '{k}': {v}"
+                    assert not torch.isinf(
+                        torch.tensor(v)
+                    ).any(), f"Inf detected in metric '{k}': {v}"
 
         # Check model parameters
         for param in learner.model.parameters():
@@ -409,10 +411,10 @@ class TestNumericalStability:
         metrics = learner.learn_from_text("Test text with multiple words", domain="test")
 
         # Check that loss is reasonable (not exploded)
-        assert metrics['total_loss'] < 1000, f"Loss exploded: {metrics['total_loss']}"
-        assert metrics['total_loss'] > 0, f"Loss is non-positive: {metrics['total_loss']}"
-        assert not torch.isnan(torch.tensor(metrics['total_loss'])).any(), "Loss is NaN"
-        assert not torch.isinf(torch.tensor(metrics['total_loss'])).any(), "Loss is Inf"
+        assert metrics["total_loss"] < 1000, f"Loss exploded: {metrics['total_loss']}"
+        assert metrics["total_loss"] > 0, f"Loss is non-positive: {metrics['total_loss']}"
+        assert not torch.isnan(torch.tensor(metrics["total_loss"])).any(), "Loss is NaN"
+        assert not torch.isinf(torch.tensor(metrics["total_loss"])).any(), "Loss is Inf"
 
     def test_empty_text_handling(self, small_model, tokenizer, continual_config):
         """Test handling of edge case: empty text."""
@@ -453,7 +455,7 @@ class TestMemoryEfficiency:
         # Should handle without memory explosion
         metrics = learner.learn_from_text(long_text, domain="test")
 
-        assert metrics['total_loss'] >= 0
+        assert metrics["total_loss"] >= 0
 
 
 if __name__ == "__main__":

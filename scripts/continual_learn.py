@@ -23,7 +23,6 @@ sys.path.append(str(Path(__file__).parent.parent))
 from src.model.llm import ContinualLLM
 from src.tokenization.bpe_tokenizer import BPETokenizer
 from src.continual.continual_trainer import ContinualLearner, ContinualLearningConfig
-from src.continual.experience_replay import Experience
 
 
 def main():

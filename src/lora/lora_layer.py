@@ -19,8 +19,6 @@ References:
 
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
-from typing import Optional
 from dataclasses import dataclass
 import math
 
@@ -37,6 +35,7 @@ class LoRAConfig:
         merge_weights: Whether to merge LoRA weights into base weights
         target_modules: List of module names to apply LoRA to
     """
+
     r: int = 8
     alpha: float = 16.0
     dropout: float = 0.0
@@ -48,8 +47,13 @@ class LoRAConfig:
         if self.target_modules is None:
             # Default: apply to all attention projections + FFN
             self.target_modules = [
-                "q_proj", "k_proj", "v_proj", "o_proj",  # Attention
-                "w1", "w2", "w3"  # SwiGLU feed-forward
+                "q_proj",
+                "k_proj",
+                "v_proj",
+                "o_proj",  # Attention
+                "w1",
+                "w2",
+                "w3",  # SwiGLU feed-forward
             ]
 
     @property
@@ -79,7 +83,7 @@ class LoRALayer(nn.Module):
         out_features: int,
         r: int = 8,
         alpha: float = 16.0,
-        dropout: float = 0.0
+        dropout: float = 0.0,
     ):
         super().__init__()
         self.r = r
@@ -144,11 +148,7 @@ class LinearWithLoRA(nn.Module):
     """
 
     def __init__(
-        self,
-        base_layer: nn.Linear,
-        r: int = 8,
-        alpha: float = 16.0,
-        dropout: float = 0.0
+        self, base_layer: nn.Linear, r: int = 8, alpha: float = 16.0, dropout: float = 0.0
     ):
         super().__init__()
 
@@ -168,7 +168,7 @@ class LinearWithLoRA(nn.Module):
             out_features=self.out_features,
             r=r,
             alpha=alpha,
-            dropout=dropout
+            dropout=dropout,
         )
 
         # Track if LoRA is merged into base weights
@@ -202,8 +202,7 @@ class LinearWithLoRA(nn.Module):
         """
         if not self.merged:
             # Compute ΔW = (α/r)·BA
-            delta_w = (self.lora.scaling *
-                      self.lora.lora_B @ self.lora.lora_A)
+            delta_w = self.lora.scaling * self.lora.lora_B @ self.lora.lora_A
 
             # Merge into base weights
             self.base_layer.weight.data += delta_w
@@ -220,8 +219,7 @@ class LinearWithLoRA(nn.Module):
         """
         if self.merged:
             # Compute ΔW = (α/r)·BA
-            delta_w = (self.lora.scaling *
-                      self.lora.lora_B @ self.lora.lora_A)
+            delta_w = self.lora.scaling * self.lora.lora_B @ self.lora.lora_A
 
             # Subtract from base weights
             self.base_layer.weight.data -= delta_w
@@ -298,10 +296,10 @@ def count_lora_parameters(model: nn.Module) -> dict:
     base_params_count = total_params - lora_params_count
 
     return {
-        'total': total_params,
-        'lora': lora_params_count,
-        'base': base_params_count,
-        'lora_percentage': 100.0 * lora_params_count / total_params if total_params > 0 else 0
+        "total": total_params,
+        "lora": lora_params_count,
+        "base": base_params_count,
+        "lora_percentage": 100.0 * lora_params_count / total_params if total_params > 0 else 0,
     }
 
 
