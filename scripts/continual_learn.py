@@ -23,7 +23,6 @@ sys.path.append(str(Path(__file__).parent.parent))
 from src.model.llm import ContinualLLM
 from src.tokenization.bpe_tokenizer import BPETokenizer
 from src.continual.continual_trainer import ContinualLearner, ContinualLearningConfig
-from src.continual.experience_replay import Experience
 
 
 def main():
@@ -106,9 +105,33 @@ def main():
     from src.model.llm import ModelConfig
     config = ModelConfig(**checkpoint['config'])
 
-    # Create model
+    # Create base model
     base_model = ContinualLLM(config)
-    base_model.load_state_dict(checkpoint['model_state_dict'])
+
+    # Handle both checkpoint formats:
+    # - Pretrain format: 'model_state_dict' (plain model)
+    # - Continual learning format: 'state_dict' (LoRA-wrapped model)
+    if 'model_state_dict' in checkpoint:
+        # Pretrain checkpoint - load directly
+        base_model.load_state_dict(checkpoint['model_state_dict'])
+    elif 'state_dict' in checkpoint:
+        # Continual learning checkpoint - extract base model weights
+        state_dict = checkpoint['state_dict']
+
+        # Filter out LoRA-specific keys and remove 'base_model.' prefix
+        base_state_dict = {}
+        for key, value in state_dict.items():
+            if key.startswith('base_model.') and 'lora' not in key:
+                # Remove 'base_model.' prefix and '.base_layer' if present
+                clean_key = key[len('base_model.'):]  # Remove 'base_model.'
+                if '.base_layer.' in clean_key:
+                    clean_key = clean_key.replace('.base_layer.', '')
+                base_state_dict[clean_key] = value
+
+        base_model.load_state_dict(base_state_dict, strict=False)
+        print("✓ Loaded base model from continual learning checkpoint")
+    else:
+        raise KeyError("Checkpoint must contain either 'model_state_dict' or 'state_dict'")
 
     print(f"✓ Model loaded: {base_model.get_num_params():,} parameters\n")
 

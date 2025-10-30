@@ -26,7 +26,6 @@ import torch.nn.functional as F
 from typing import Dict, Optional, List
 from dataclasses import dataclass
 from tqdm import tqdm
-import copy
 
 
 @dataclass

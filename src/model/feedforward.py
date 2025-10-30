@@ -10,7 +10,6 @@ Implements various GLU (Gated Linear Unit) variants:
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from typing import Optional
 
 
 class SwiGLU(nn.Module):
@@ -41,13 +40,7 @@ class SwiGLU(nn.Module):
         - Used in: LLaMA 3, PaLM, Mistral, Granite
     """
 
-    def __init__(
-        self,
-        d_model: int,
-        d_ff: int,
-        bias: bool = False,
-        dropout: float = 0.0
-    ):
+    def __init__(self, d_model: int, d_ff: int, bias: bool = False, dropout: float = 0.0):
         super().__init__()
 
         self.d_model = d_model
@@ -99,13 +92,7 @@ class GeGLU(nn.Module):
         - Used in some vision transformers
     """
 
-    def __init__(
-        self,
-        d_model: int,
-        d_ff: int,
-        bias: bool = False,
-        dropout: float = 0.0
-    ):
+    def __init__(self, d_model: int, d_ff: int, bias: bool = False, dropout: float = 0.0):
         super().__init__()
 
         self.w1 = nn.Linear(d_model, d_ff, bias=bias)
@@ -143,7 +130,7 @@ class FeedForward(nn.Module):
         d_ff: int,
         bias: bool = False,
         dropout: float = 0.0,
-        activation: str = "gelu"
+        activation: str = "gelu",
     ):
         super().__init__()
 
@@ -173,7 +160,7 @@ def create_feedforward(
     ff_type: str = "swiglu",
     bias: bool = False,
     dropout: float = 0.0,
-    **kwargs
+    **kwargs,
 ) -> nn.Module:
     """
     Factory function to create feed-forward layers.
@@ -206,8 +193,7 @@ def create_feedforward(
         return FeedForward(d_model, d_ff, bias, dropout, activation=ff_type)
     else:
         raise ValueError(
-            f"Unknown ff_type: {ff_type}. "
-            f"Use 'swiglu', 'geglu', 'gelu', 'relu', or 'silu'"
+            f"Unknown ff_type: {ff_type}. " f"Use 'swiglu', 'geglu', 'gelu', 'relu', or 'silu'"
         )
 
 

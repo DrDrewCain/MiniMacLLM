@@ -4,7 +4,7 @@ Unit tests for normalization layers (RMSNorm, LayerNorm).
 
 import pytest
 import torch
-import torch.nn as nn
+
 from src.model.normalization import RMSNorm, LayerNorm, create_norm_layer
 
 
@@ -32,7 +32,7 @@ class TestRMSNorm:
         output = norm(x)
 
         # Check that RMS is approximately 1 (scaled by weight)
-        rms = torch.sqrt(torch.mean(output ** 2, dim=-1))
+        rms = torch.sqrt(torch.mean(output**2, dim=-1))
         # Weight is initialized to 1, so RMS should be close to 1
         assert torch.allclose(rms, torch.ones_like(rms), atol=0.1)
 
@@ -49,8 +49,8 @@ class TestRMSNorm:
         output2 = norm(scaled_x)
 
         # The normalized outputs should be similar in magnitude
-        rms1 = torch.sqrt(torch.mean(output1 ** 2, dim=-1))
-        rms2 = torch.sqrt(torch.mean(output2 ** 2, dim=-1))
+        rms1 = torch.sqrt(torch.mean(output1**2, dim=-1))
+        rms2 = torch.sqrt(torch.mean(output2**2, dim=-1))
 
         assert torch.allclose(rms1, rms2, atol=0.01)
 

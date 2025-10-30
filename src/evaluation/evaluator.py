@@ -18,20 +18,18 @@ import time
 from collections import defaultdict
 
 from .metrics import (
-    compute_perplexity,
     compute_batch_perplexity,
     compute_forgetting_rate,
     compute_accuracy,
     evaluate_generation_quality,
-    compute_domain_specific_accuracy,
-    PerplexityResult,
-    ForgettingMetrics
+    ForgettingMetrics,
 )
 
 
 @dataclass
 class EvaluationConfig:
     """Configuration for evaluation."""
+
     device: str = "cpu"
     max_eval_batches: Optional[int] = None  # Limit evaluation batches
     compute_forgetting: bool = True  # Track forgetting metrics
@@ -46,6 +44,7 @@ class EvaluationConfig:
 @dataclass
 class EvaluationResult:
     """Results from a single evaluation run."""
+
     timestamp: float
     step: int
     perplexity: float
@@ -60,32 +59,34 @@ class EvaluationResult:
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for serialization."""
         result = {
-            'timestamp': self.timestamp,
-            'step': self.step,
-            'perplexity': self.perplexity,
-            'cross_entropy': self.cross_entropy,
-            'accuracy': self.accuracy,
-            'domain': self.domain,
-            'generation_samples': self.generation_samples,
-            'generation_quality': self.generation_quality,
-            'additional_metrics': self.additional_metrics
+            "timestamp": self.timestamp,
+            "step": self.step,
+            "perplexity": self.perplexity,
+            "cross_entropy": self.cross_entropy,
+            "accuracy": self.accuracy,
+            "domain": self.domain,
+            "generation_samples": self.generation_samples,
+            "generation_quality": self.generation_quality,
+            "additional_metrics": self.additional_metrics,
         }
 
         if self.forgetting_metrics:
-            result['forgetting_metrics'] = {
-                'forgetting_rate': self.forgetting_metrics.forgetting_rate,
-                'backward_transfer': self.forgetting_metrics.backward_transfer,
-                'forward_transfer': self.forgetting_metrics.forward_transfer,
-                'task_performances': self.forgetting_metrics.task_performances
+            result["forgetting_metrics"] = {
+                "forgetting_rate": self.forgetting_metrics.forgetting_rate,
+                "backward_transfer": self.forgetting_metrics.backward_transfer,
+                "forward_transfer": self.forgetting_metrics.forward_transfer,
+                "task_performances": self.forgetting_metrics.task_performances,
             }
 
         return result
 
     def __repr__(self) -> str:
-        return (f"EvaluationResult(step={self.step}, "
-                f"perplexity={self.perplexity:.4f}, "
-                f"accuracy={self.accuracy:.4f}, "
-                f"domain={self.domain})")
+        return (
+            f"EvaluationResult(step={self.step}, "
+            f"perplexity={self.perplexity:.4f}, "
+            f"accuracy={self.accuracy:.4f}, "
+            f"domain={self.domain})"
+        )
 
 
 class Evaluator:
@@ -109,12 +110,7 @@ class Evaluator:
         >>> print(f"Forgetting rate: {result.forgetting_metrics.forgetting_rate:.2%}")
     """
 
-    def __init__(
-        self,
-        model: nn.Module,
-        tokenizer: Any,
-        config: EvaluationConfig
-    ):
+    def __init__(self, model: nn.Module, tokenizer: Any, config: EvaluationConfig):
         """
         Initialize evaluator.
 
@@ -143,7 +139,7 @@ class Evaluator:
         dataloader: torch.utils.data.DataLoader,
         domain: Optional[str] = None,
         step: int = 0,
-        save_path: Optional[Path] = None
+        save_path: Optional[Path] = None,
     ) -> EvaluationResult:
         """
         Evaluate model on a dataset.
@@ -167,17 +163,17 @@ class Evaluator:
             self.model,
             dataloader,
             device=self.config.device,
-            max_batches=self.config.max_eval_batches
+            max_batches=self.config.max_eval_batches,
         )
 
         # Compute accuracy (on first batch for efficiency)
         first_batch = next(iter(dataloader))
-        input_ids = first_batch['input_ids'] if isinstance(first_batch, dict) else first_batch[0]
+        input_ids = first_batch["input_ids"] if isinstance(first_batch, dict) else first_batch[0]
         accuracy = compute_accuracy(
             self.model,
             input_ids,
             input_ids.clone(),  # Labels same as inputs for LM
-            device=self.config.device
+            device=self.config.device,
         )
 
         # Generate samples
@@ -200,9 +196,7 @@ class Evaluator:
                     generation_quality[k].append(v)
 
             # Average quality metrics
-            generation_quality = {
-                k: sum(v) / len(v) for k, v in generation_quality.items()
-            }
+            generation_quality = {k: sum(v) / len(v) for k, v in generation_quality.items()}
 
         # Compute forgetting metrics if enabled
         forgetting_metrics = None
@@ -214,8 +208,7 @@ class Evaluator:
             # Compare with previous step
             if step > 0 and (step - 1) in self.task_performances:
                 forgetting_metrics = compute_forgetting_rate(
-                    self.task_performances[step],
-                    self.task_performances[step - 1]
+                    self.task_performances[step], self.task_performances[step - 1]
                 )
 
                 if self.config.verbose:
@@ -231,7 +224,7 @@ class Evaluator:
             domain=domain,
             forgetting_metrics=forgetting_metrics,
             generation_samples=generation_samples,
-            generation_quality=generation_quality
+            generation_quality=generation_quality,
         )
 
         # Update history
@@ -255,7 +248,7 @@ class Evaluator:
         self,
         test_datasets: Dict[str, torch.utils.data.DataLoader],
         step: int,
-        save_dir: Optional[Path] = None
+        save_dir: Optional[Path] = None,
     ) -> Dict[str, EvaluationResult]:
         """
         Evaluate on multiple domains for continual learning.
@@ -325,20 +318,20 @@ class Evaluator:
     def save_result(self, result: EvaluationResult, path: Path):
         """Save evaluation result to JSON."""
         path.parent.mkdir(parents=True, exist_ok=True)
-        with open(path, 'w') as f:
+        with open(path, "w") as f:
             json.dump(result.to_dict(), f, indent=2)
 
     def save_history(self, path: Path):
         """Save entire evaluation history to JSON."""
         path.parent.mkdir(parents=True, exist_ok=True)
         history_data = {
-            'history': [r.to_dict() for r in self.history],
-            'domain_history': {
+            "history": [r.to_dict() for r in self.history],
+            "domain_history": {
                 domain: [r.to_dict() for r in results]
                 for domain, results in self.domain_history.items()
-            }
+            },
         }
-        with open(path, 'w') as f:
+        with open(path, "w") as f:
             json.dump(history_data, f, indent=2)
 
         if self.config.verbose:
@@ -346,7 +339,7 @@ class Evaluator:
 
     def load_history(self, path: Path):
         """Load evaluation history from JSON."""
-        with open(path, 'r') as f:
+        with open(path, "r") as f:
             data = json.load(f)
 
         # Reconstruct history
@@ -355,9 +348,7 @@ class Evaluator:
             print(f"✓ Loaded evaluation history from {path}")
 
     def get_learning_curve(
-        self,
-        domain: Optional[str] = None,
-        metric: str = 'perplexity'
+        self, domain: Optional[str] = None, metric: str = "perplexity"
     ) -> Tuple[List[int], List[float]]:
         """
         Get learning curve for a metric.
@@ -421,7 +412,7 @@ class Evaluator:
             "=" * 80,
             "PERFORMANCE BY DOMAIN",
             "=" * 80,
-            ""
+            "",
         ]
 
         for domain, history in self.domain_history.items():
@@ -429,11 +420,13 @@ class Evaluator:
                 continue
 
             latest = history[-1]
-            report_lines.extend([
-                f"\n{domain.upper()}:",
-                f"  Latest Perplexity: {latest.perplexity:.4f}",
-                f"  Latest Accuracy: {latest.accuracy:.4f}",
-            ])
+            report_lines.extend(
+                [
+                    f"\n{domain.upper()}:",
+                    f"  Latest Perplexity: {latest.perplexity:.4f}",
+                    f"  Latest Accuracy: {latest.accuracy:.4f}",
+                ]
+            )
 
             if len(history) > 1:
                 first = history[0]
@@ -441,34 +434,26 @@ class Evaluator:
                 report_lines.append(f"  Perplexity Change: {improvement:+.4f}")
 
             if latest.forgetting_metrics:
-                report_lines.extend([
-                    f"  Forgetting Rate: {latest.forgetting_metrics.forgetting_rate:.4f}",
-                    f"  Backward Transfer: {latest.forgetting_metrics.backward_transfer:+.4f}",
-                ])
+                report_lines.extend(
+                    [
+                        f"  Forgetting Rate: {latest.forgetting_metrics.forgetting_rate:.4f}",
+                        f"  Backward Transfer: {latest.forgetting_metrics.backward_transfer:+.4f}",
+                    ]
+                )
 
-        report_lines.extend([
-            "",
-            "=" * 80,
-            "GENERATION SAMPLES",
-            "=" * 80,
-            ""
-        ])
+        report_lines.extend(["", "=" * 80, "GENERATION SAMPLES", "=" * 80, ""])
 
         if self.history and self.history[-1].generation_samples:
             for sample in self.history[-1].generation_samples[:3]:
                 report_lines.append(sample)
 
-        report_lines.extend([
-            "",
-            "=" * 80,
-            ""
-        ])
+        report_lines.extend(["", "=" * 80, ""])
 
         report = "\n".join(report_lines)
 
         if save_path:
             save_path.parent.mkdir(parents=True, exist_ok=True)
-            with open(save_path, 'w') as f:
+            with open(save_path, "w") as f:
                 f.write(report)
             if self.config.verbose:
                 print(f"✓ Saved report to {save_path}")

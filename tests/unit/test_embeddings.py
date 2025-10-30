@@ -4,7 +4,7 @@ Unit tests for position embeddings (RoPE).
 
 import pytest
 import torch
-import math
+
 from src.model.embeddings import RotaryPositionEmbedding, apply_rotary_pos_emb
 
 

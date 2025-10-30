@@ -9,7 +9,7 @@ Provides functions to:
 
 import os
 from pathlib import Path
-from typing import List, Optional, Union
+from typing import List, Optional
 from tqdm import tqdm
 
 from .bpe_tokenizer import BPETokenizer
@@ -21,7 +21,7 @@ def train_tokenizer_from_files(
     min_frequency: int = 2,
     special_tokens: Optional[List[str]] = None,
     max_lines: Optional[int] = None,
-    save_path: Optional[str] = None
+    save_path: Optional[str] = None,
 ) -> BPETokenizer:
     """
     Train BPE tokenizer from text files.
@@ -53,7 +53,7 @@ def train_tokenizer_from_files(
     for file_path in file_paths:
         print(f"Reading {file_path}...")
 
-        with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+        with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
             file_texts = []
 
             for line_num, line in enumerate(f):
@@ -73,9 +73,7 @@ def train_tokenizer_from_files(
 
     # Create and train tokenizer
     tokenizer = BPETokenizer(
-        vocab_size=vocab_size,
-        min_frequency=min_frequency,
-        special_tokens=special_tokens
+        vocab_size=vocab_size, min_frequency=min_frequency, special_tokens=special_tokens
     )
 
     tokenizer.train(texts, verbose=True)
@@ -95,7 +93,7 @@ def train_tokenizer_from_directory(
     special_tokens: Optional[List[str]] = None,
     max_files: Optional[int] = None,
     max_lines_per_file: Optional[int] = None,
-    save_path: Optional[str] = None
+    save_path: Optional[str] = None,
 ) -> BPETokenizer:
     """
     Train tokenizer from all files in a directory.
@@ -135,7 +133,7 @@ def train_tokenizer_from_directory(
 
     for file_path in tqdm(file_paths, desc="Reading files"):
         try:
-            with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+            with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
                 file_texts = []
 
                 for line_num, line in enumerate(f):
@@ -156,9 +154,7 @@ def train_tokenizer_from_directory(
 
     # Train tokenizer
     tokenizer = BPETokenizer(
-        vocab_size=vocab_size,
-        min_frequency=min_frequency,
-        special_tokens=special_tokens
+        vocab_size=vocab_size, min_frequency=min_frequency, special_tokens=special_tokens
     )
 
     tokenizer.train(texts, verbose=True)
@@ -174,7 +170,7 @@ def train_tokenizer_from_texts(
     vocab_size: int = 32000,
     min_frequency: int = 2,
     special_tokens: Optional[List[str]] = None,
-    save_path: Optional[str] = None
+    save_path: Optional[str] = None,
 ) -> BPETokenizer:
     """
     Train tokenizer directly from list of texts.
@@ -194,9 +190,7 @@ def train_tokenizer_from_texts(
         >>> tokenizer = train_tokenizer_from_texts(texts, vocab_size=1000)
     """
     tokenizer = BPETokenizer(
-        vocab_size=vocab_size,
-        min_frequency=min_frequency,
-        special_tokens=special_tokens
+        vocab_size=vocab_size, min_frequency=min_frequency, special_tokens=special_tokens
     )
 
     tokenizer.train(texts, verbose=True)
@@ -208,10 +202,7 @@ def train_tokenizer_from_texts(
 
 
 def create_domain_specific_tokenizer(
-    domain: str,
-    data_paths: List[str],
-    vocab_size: int = 32000,
-    save_path: Optional[str] = None
+    domain: str, data_paths: List[str], vocab_size: int = 32000, save_path: Optional[str] = None
 ) -> BPETokenizer:
     """
     Create tokenizer optimized for specific domain.
@@ -239,7 +230,7 @@ def create_domain_specific_tokenizer(
         "code": ["<PAD>", "<UNK>", "<BOS>", "<EOS>", "<INDENT>", "<DEDENT>", "<NEWLINE>"],
         "math": ["<PAD>", "<UNK>", "<BOS>", "<EOS>", "<EQUATION>", "<PROOF>", "<THEOREM>"],
         "medical": ["<PAD>", "<UNK>", "<BOS>", "<EOS>", "<DIAGNOSIS>", "<SYMPTOM>", "<TREATMENT>"],
-        "general": ["<PAD>", "<UNK>", "<BOS>", "<EOS>"]
+        "general": ["<PAD>", "<UNK>", "<BOS>", "<EOS>"],
     }
 
     special_tokens = domain_special_tokens.get(domain, domain_special_tokens["general"])
@@ -251,7 +242,7 @@ def create_domain_specific_tokenizer(
         file_paths=data_paths,
         vocab_size=vocab_size,
         special_tokens=special_tokens,
-        save_path=save_path
+        save_path=save_path,
     )
 
 
@@ -265,9 +256,9 @@ def test_tokenizer(tokenizer: BPETokenizer, test_texts: List[str]):
 
     Prints encoding/decoding results.
     """
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("Testing Tokenizer")
-    print("="*60)
+    print("=" * 60)
 
     for i, text in enumerate(test_texts, 1):
         print(f"\nTest {i}: '{text}'")
@@ -305,21 +296,21 @@ def get_tokenizer_stats(tokenizer: BPETokenizer, texts: List[str]) -> dict:
     total_words = sum(len(text.split()) for text in texts)
 
     return {
-        'vocab_size': len(tokenizer),
-        'total_texts': len(texts),
-        'total_characters': total_chars,
-        'total_tokens': total_tokens,
-        'total_words': total_words,
-        'avg_chars_per_token': total_chars / total_tokens if total_tokens > 0 else 0,
-        'compression_ratio': total_chars / total_tokens if total_tokens > 0 else 0,
-        'tokens_per_word': total_tokens / total_words if total_words > 0 else 0
+        "vocab_size": len(tokenizer),
+        "total_texts": len(texts),
+        "total_characters": total_chars,
+        "total_tokens": total_tokens,
+        "total_words": total_words,
+        "avg_chars_per_token": total_chars / total_tokens if total_tokens > 0 else 0,
+        "compression_ratio": total_chars / total_tokens if total_tokens > 0 else 0,
+        "tokens_per_word": total_tokens / total_words if total_words > 0 else 0,
     }
 
 
 if __name__ == "__main__":
     # Example usage
     print("Tokenizer Training Examples")
-    print("="*60)
+    print("=" * 60)
 
     # Create sample data
     sample_texts = [
@@ -327,7 +318,7 @@ if __name__ == "__main__":
         "Machine learning is transforming the world.",
         "Python programming is fun and useful.",
         "Natural language processing with transformers.",
-        "Deep learning models require large datasets."
+        "Deep learning models require large datasets.",
     ]
 
     # Example 1: Train from texts
@@ -335,15 +326,11 @@ if __name__ == "__main__":
     tokenizer = train_tokenizer_from_texts(
         texts=sample_texts * 10,  # Repeat for more data
         vocab_size=300,
-        save_path="test_tokenizer_output"
+        save_path="test_tokenizer_output",
     )
 
     # Test it
-    test_texts = [
-        "The quick fox",
-        "Machine learning transformers",
-        "Python programming"
-    ]
+    test_texts = ["The quick fox", "Machine learning transformers", "Python programming"]
 
     test_tokenizer(tokenizer, test_texts)
 
@@ -355,6 +342,7 @@ if __name__ == "__main__":
 
     # Cleanup
     import shutil
+
     if os.path.exists("test_tokenizer_output"):
         shutil.rmtree("test_tokenizer_output")
 

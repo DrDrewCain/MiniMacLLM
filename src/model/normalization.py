@@ -12,7 +12,6 @@ RMSNorm is simpler and faster than LayerNorm while maintaining similar performan
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from typing import Optional
 
 
 class RMSNorm(nn.Module):
@@ -50,7 +49,7 @@ class RMSNorm(nn.Module):
         """
         # Compute RMS: sqrt(mean(x^2))
         # keepdim=True maintains the dimension for broadcasting
-        rms = torch.sqrt(torch.mean(x ** 2, dim=-1, keepdim=True) + self.eps)
+        rms = torch.sqrt(torch.mean(x**2, dim=-1, keepdim=True) + self.eps)
         return x / rms
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -98,20 +97,11 @@ class LayerNorm(nn.Module):
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Forward pass using PyTorch's native LayerNorm."""
-        return F.layer_norm(
-            x,
-            self.weight.shape,
-            self.weight,
-            self.bias,
-            self.eps
-        )
+        return F.layer_norm(x, self.weight.shape, self.weight, self.bias, self.eps)
 
 
 def create_norm_layer(
-    dim: int,
-    norm_type: str = "rmsnorm",
-    eps: float = 1e-6,
-    **kwargs
+    dim: int, norm_type: str = "rmsnorm", eps: float = 1e-6, **kwargs
 ) -> nn.Module:
     """
     Factory function to create normalization layers.
