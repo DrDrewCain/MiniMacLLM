@@ -124,7 +124,7 @@ def main():
         for key, value in state_dict.items():
             if key.startswith('base_model.') and 'lora' not in key:
                 # Remove 'base_model.' prefix and '.base_layer' if present
-                clean_key = key[11:]  # Remove 'base_model.'
+                clean_key = key[len('base_model.'):]  # Remove 'base_model.'
                 if '.base_layer.' in clean_key:
                     clean_key = clean_key.replace('.base_layer', '')
                 base_state_dict[clean_key] = value
