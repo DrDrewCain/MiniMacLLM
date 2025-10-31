@@ -12,12 +12,12 @@ NC='\033[0m' # No Color
 
 echo "============================================================"
 echo "Continual Learning Demonstration"
-echo "with Improved Byte-Level BPE Tokenizer"
+echo "with Byte-Level BPE Tokenizer"
 echo "============================================================"
 echo ""
 
 # Configuration
-MODEL_PATH="checkpoints/wikitext_medium/final/model.pt"
+MODEL_PATH="checkpoints/wikitext_medium_byte_level/final/model.pt"
 TOKENIZER_PATH="data/tokenizers/wikitext_8k_byte_level"
 PYTHON_DATA="data/continual_learning/python_basics.txt"
 MATH_DATA="data/continual_learning/math_concepts.txt"
@@ -25,34 +25,24 @@ MATH_DATA="data/continual_learning/math_concepts.txt"
 # Check if base model exists
 if [ ! -f "$MODEL_PATH" ]; then
     echo "Error: Base model not found at $MODEL_PATH"
-    echo "Please run pre-training first."
+    echo ""
+    echo "Please train the model first with:"
+    echo "  python scripts/pretrain.py \\"
+    echo "    --config configs/medium.yaml \\"
+    echo "    --data data/raw/wikitext2_train.txt \\"
+    echo "    --tokenizer $TOKENIZER_PATH \\"
+    echo "    --save_dir checkpoints/wikitext_medium_byte_level \\"
+    echo "    --epochs 5 \\"
+    echo "    --batch_size 8 \\"
+    echo "    --device mps"
     exit 1
 fi
 
-# Check if byte-level tokenizer exists, if not train it
+# Check if byte-level tokenizer exists
 if [ ! -d "$TOKENIZER_PATH" ]; then
-    echo "Byte-level tokenizer not found. Training it now..."
-    echo ""
-
-    # Check for WikiText data
-    if [ ! -f "data/raw/wikitext2_train.txt" ]; then
-        echo "Error: WikiText data not found."
-        echo "Please ensure data/raw/wikitext2_train.txt exists."
-        exit 1
-    fi
-
-    # Train the tokenizer
-    python scripts/train_tokenizer.py \
-        --data data/raw/wikitext2_train.txt \
-        --vocab_size 8000 \
-        --max_lines 50000 \
-        --min_frequency 2 \
-        --save "$TOKENIZER_PATH" \
-        --test
-
-    echo ""
-    echo "✓ Byte-level tokenizer trained successfully!"
-    echo ""
+    echo "Error: Byte-level tokenizer not found at $TOKENIZER_PATH"
+    echo "The tokenizer should already be trained. Please check the path."
+    exit 1
 fi
 
 echo -e "${BLUE}Phase 1: Testing Base Model (Wikipedia knowledge)${NC}"
@@ -83,7 +73,7 @@ echo -e "${YELLOW}Test 1.3: Math knowledge (should be weak - not in training)${N
 python scripts/generate.py \
     --model "$MODEL_PATH" \
     --tokenizer "$TOKENIZER_PATH" \
-    --prompt "The quadratic formula is" \
+    --prompt "The ju is" \
     --max_tokens 50 \
     --temperature 0.7 \
     --top_k 50
@@ -202,4 +192,10 @@ echo "  1. Real-time learning (new domains learned in minutes)"
 echo "  2. Zero catastrophic forgetting (LoRA + Replay + EWC)"
 echo "  3. Parameter efficiency (97% of params shared across domains)"
 echo "  4. Byte-level BPE tokenizer (handles ANY Unicode without <UNK>)"
+echo ""
+echo "Tokenizer features:"
+echo "  - 8,000 token vocabulary (257 base + 7,743 learned merges)"
+echo "  - Batch encoding with padding/truncation"
+echo "  - Offset mapping for character-to-token alignment"
+echo "  - LRU caching for fast repeated encodings"
 echo ""

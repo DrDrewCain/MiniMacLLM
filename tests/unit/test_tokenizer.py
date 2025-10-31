@@ -298,3 +298,118 @@ class TestBPETokenizer:
         tokens = tokenizer.encode(test_text)
         decoded = tokenizer.decode(tokens)
         assert decoded == test_text
+
+    def test_encode_plus_with_offsets(self):
+        """Test encode_plus with offset mapping."""
+        tokenizer = BPETokenizer(vocab_size=500)
+        tokenizer.train(["Hello world test"], verbose=False)
+
+        result = tokenizer.encode_plus(
+            "Hello world",
+            return_offsets_mapping=True
+        )
+
+        assert "input_ids" in result
+        assert "offset_mapping" in result
+        assert len(result["input_ids"]) == len(result["offset_mapping"])
+        assert all(isinstance(offset, tuple) for offset in result["offset_mapping"])
+        assert all(len(offset) == 2 for offset in result["offset_mapping"])
+
+    def test_batch_encode_plus_no_padding(self):
+        """Test batch encoding without padding."""
+        tokenizer = BPETokenizer(vocab_size=500)
+        tokenizer.train(["Hello world test"], verbose=False)
+
+        texts = ["Hello", "Hello world"]
+        result = tokenizer.batch_encode_plus(texts, padding=False)
+
+        assert len(result.input_ids) == 2
+        assert len(result.input_ids[0]) < len(result.input_ids[1])
+
+    def test_batch_encode_plus_longest_padding(self):
+        """Test batch encoding with longest padding."""
+        tokenizer = BPETokenizer(vocab_size=500)
+        tokenizer.train(["Hello world test data"], verbose=False)
+
+        texts = ["Hi", "Hello world"]
+        result = tokenizer.batch_encode_plus(
+            texts,
+            padding="longest",
+            return_attention_mask=True
+        )
+
+        # All sequences should have same length
+        assert len(result.input_ids[0]) == len(result.input_ids[1])
+        assert len(result.attention_mask[0]) == len(result.attention_mask[1])
+
+        # Shorter sequence should have padding
+        assert sum(result.attention_mask[0]) < len(result.attention_mask[0])
+
+    def test_batch_encode_plus_max_length_padding(self):
+        """Test batch encoding with max_length padding."""
+        tokenizer = BPETokenizer(vocab_size=500)
+        tokenizer.train(["Hello world test"], verbose=False)
+
+        texts = ["Hi", "Hello"]
+        result = tokenizer.batch_encode_plus(
+            texts,
+            padding="max_length",
+            max_length=10,
+            return_attention_mask=True
+        )
+
+        # All sequences should be exactly max_length
+        assert all(len(ids) == 10 for ids in result.input_ids)
+        assert all(len(mask) == 10 for mask in result.attention_mask)
+
+    def test_batch_encode_plus_truncation(self):
+        """Test batch encoding with truncation."""
+        tokenizer = BPETokenizer(vocab_size=500)
+        tokenizer.train(["Hello world test data"], verbose=False)
+
+        texts = ["Hello world test data extra"]
+        result = tokenizer.batch_encode_plus(
+            texts,
+            truncation=True,
+            max_length=5
+        )
+
+        # Should be truncated to max_length
+        assert all(len(ids) <= 5 for ids in result.input_ids)
+
+    def test_batch_encode_plus_with_offsets(self):
+        """Test batch encoding with offset mapping."""
+        tokenizer = BPETokenizer(vocab_size=500)
+        tokenizer.train(["Hello world"], verbose=False)
+
+        texts = ["Hello", "World"]
+        result = tokenizer.batch_encode_plus(
+            texts,
+            padding="longest",
+            return_offsets_mapping=True
+        )
+
+        assert result.offset_mapping is not None
+        assert len(result.offset_mapping) == 2
+        # Padded positions should have (0, 0) offsets
+        assert all(
+            offset == (0, 0) or (offset[0] < offset[1])
+            for offsets in result.offset_mapping
+            for offset in offsets
+        )
+
+    def test_pad_token_id(self):
+        """Test pad_token_id property."""
+        tokenizer = BPETokenizer(vocab_size=100)
+        tokenizer.train(["test"], verbose=False)
+
+        assert tokenizer.pad_token_id is not None
+        assert tokenizer.pad_token_id == tokenizer.vocab["<|endoftext|>"]
+
+    def test_eos_token_id(self):
+        """Test eos_token_id property."""
+        tokenizer = BPETokenizer(vocab_size=100)
+        tokenizer.train(["test"], verbose=False)
+
+        assert tokenizer.eos_token_id is not None
+        assert tokenizer.eos_token_id == tokenizer.vocab["<|endoftext|>"]

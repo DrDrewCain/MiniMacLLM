@@ -22,10 +22,55 @@ References:
 import json
 import regex as re
 import unicodedata
-from typing import List, Dict, Tuple, Optional
+from typing import List, Dict, Tuple, Optional, Union
 from collections import Counter, defaultdict, OrderedDict
 from pathlib import Path
 from functools import lru_cache
+from enum import Enum
+from dataclasses import dataclass
+
+
+class PaddingStrategy(str, Enum):
+    """Padding strategies for batch encoding."""
+    LONGEST = "longest"
+    MAX_LENGTH = "max_length"
+    DO_NOT_PAD = "do_not_pad"
+
+
+class TruncationStrategy(str, Enum):
+    """Truncation strategies for sequence handling."""
+    LONGEST_FIRST = "longest_first"
+    ONLY_FIRST = "only_first"
+    ONLY_SECOND = "only_second"
+    DO_NOT_TRUNCATE = "do_not_truncate"
+
+
+@dataclass
+class BatchEncoding:
+    """
+    Container for batch tokenization outputs.
+
+    Attributes:
+        input_ids: List of token IDs for each sequence
+        attention_mask: List of attention masks (1 for real tokens, 0 for padding)
+        offset_mapping: Optional character offsets for each token
+        token_type_ids: Optional token type IDs for sequence pairs
+    """
+    input_ids: List[List[int]]
+    attention_mask: Optional[List[List[int]]] = None
+    offset_mapping: Optional[List[List[Tuple[int, int]]]] = None
+    token_type_ids: Optional[List[List[int]]] = None
+
+    def to_dict(self) -> Dict:
+        """Convert to dictionary format."""
+        result = {"input_ids": self.input_ids}
+        if self.attention_mask is not None:
+            result["attention_mask"] = self.attention_mask
+        if self.offset_mapping is not None:
+            result["offset_mapping"] = self.offset_mapping
+        if self.token_type_ids is not None:
+            result["token_type_ids"] = self.token_type_ids
+        return result
 
 
 @lru_cache()
@@ -484,6 +529,176 @@ class BPETokenizer:
     def get_vocab(self) -> Dict[str, int]:
         """Get vocabulary dictionary."""
         return self.vocab.copy()
+
+    @property
+    def pad_token_id(self) -> Optional[int]:
+        """Get padding token ID (uses first special token)."""
+        if self.special_tokens:
+            return self.vocab.get(self.special_tokens[0])
+        return None
+
+    @property
+    def eos_token_id(self) -> Optional[int]:
+        """Get end-of-sequence token ID."""
+        if self.special_tokens:
+            return self.vocab.get(self.special_tokens[0])
+        return None
+
+    def encode_plus(
+        self,
+        text: str,
+        add_special_tokens: bool = False,
+        return_offsets_mapping: bool = False,
+    ) -> Dict:
+        """
+        Encode text with additional features like offset mapping.
+
+        Args:
+            text: Text to encode
+            add_special_tokens: Whether to add special tokens
+            return_offsets_mapping: Whether to return character offsets
+
+        Returns:
+            Dictionary with input_ids and optionally offset_mapping
+        """
+        # Normalize text
+        normalized = self._normalize_text(text)
+
+        # Pre-tokenize using regex
+        words = self.pattern.findall(normalized)
+
+        # Track character positions if needed
+        tokens = []
+        offsets = [] if return_offsets_mapping else None
+        char_pos = 0
+
+        for word in words:
+            # Find word position in normalized text
+            word_start = normalized.find(word, char_pos)
+            word_token_ids = self._tokenize_word(word)
+            tokens.extend(word_token_ids)
+
+            # Calculate offsets if requested
+            if return_offsets_mapping:
+                # Approximate offset (byte-level makes this complex)
+                chars_per_token = len(word) / len(word_token_ids) if word_token_ids else 0
+                for i, _ in enumerate(word_token_ids):
+                    start = int(word_start + i * chars_per_token)
+                    end = int(word_start + (i + 1) * chars_per_token)
+                    offsets.append((start, min(end, word_start + len(word))))
+
+            char_pos = word_start + len(word)
+
+        if add_special_tokens and self.special_tokens:
+            tokens.append(self.vocab[self.special_tokens[0]])
+            if return_offsets_mapping:
+                offsets.append((len(normalized), len(normalized)))
+
+        result = {"input_ids": tokens}
+        if return_offsets_mapping:
+            result["offset_mapping"] = offsets
+
+        return result
+
+    def batch_encode_plus(
+        self,
+        texts: List[str],
+        padding: Union[bool, str] = False,
+        truncation: Union[bool, str] = False,
+        max_length: Optional[int] = None,
+        add_special_tokens: bool = False,
+        return_attention_mask: bool = True,
+        return_offsets_mapping: bool = False,
+    ) -> BatchEncoding:
+        """
+        Encode multiple texts with padding and truncation.
+
+        Args:
+            texts: List of texts to encode
+            padding: Padding strategy ("longest", "max_length", or False)
+            truncation: Whether to truncate sequences
+            max_length: Maximum sequence length
+            add_special_tokens: Whether to add special tokens
+            return_attention_mask: Whether to return attention masks
+            return_offsets_mapping: Whether to return character offsets
+
+        Returns:
+            BatchEncoding with input_ids, attention_mask, and optionally offset_mapping
+
+        Example:
+            >>> tokenizer = BPETokenizer(vocab_size=1000)
+            >>> tokenizer.train(["Hello world", "Test"])
+            >>> result = tokenizer.batch_encode_plus(
+            ...     ["Hello", "Hi there!"],
+            ...     padding="longest",
+            ...     return_attention_mask=True
+            ... )
+            >>> result.input_ids  # [[1, 2], [3, 4, 0]]
+            >>> result.attention_mask  # [[1, 1], [1, 1, 0]]
+        """
+        # Encode all texts
+        all_input_ids = []
+        all_offsets = [] if return_offsets_mapping else None
+
+        for text in texts:
+            encoded = self.encode_plus(
+                text,
+                add_special_tokens=add_special_tokens,
+                return_offsets_mapping=return_offsets_mapping,
+            )
+            all_input_ids.append(encoded["input_ids"])
+            if return_offsets_mapping:
+                all_offsets.append(encoded["offset_mapping"])
+
+        # Apply truncation
+        if truncation and max_length:
+            all_input_ids = [ids[:max_length] for ids in all_input_ids]
+            if return_offsets_mapping:
+                all_offsets = [offs[:max_length] for offs in all_offsets]
+
+        # Apply padding
+        attention_masks = None
+        if padding:
+            # Determine target length
+            if padding == "max_length" or padding == PaddingStrategy.MAX_LENGTH:
+                if max_length is None:
+                    raise ValueError("max_length must be specified with 'max_length' padding")
+                target_length = max_length
+            elif padding == "longest" or padding == PaddingStrategy.LONGEST:
+                target_length = max(len(ids) for ids in all_input_ids)
+            else:
+                target_length = 0  # No padding
+
+            # Pad sequences
+            if target_length > 0:
+                pad_id = self.pad_token_id if self.pad_token_id is not None else 0
+                padded_ids = []
+                attention_masks = []
+
+                for ids in all_input_ids:
+                    padding_length = target_length - len(ids)
+                    padded_ids.append(ids + [pad_id] * padding_length)
+                    attention_masks.append([1] * len(ids) + [0] * padding_length)
+
+                all_input_ids = padded_ids
+
+                # Pad offsets too
+                if return_offsets_mapping:
+                    padded_offsets = []
+                    for offs in all_offsets:
+                        padding_length = target_length - len(offs)
+                        padded_offsets.append(offs + [(0, 0)] * padding_length)
+                    all_offsets = padded_offsets
+
+        # Create attention masks if requested but not created by padding
+        if return_attention_mask and attention_masks is None:
+            attention_masks = [[1] * len(ids) for ids in all_input_ids]
+
+        return BatchEncoding(
+            input_ids=all_input_ids,
+            attention_mask=attention_masks,
+            offset_mapping=all_offsets,
+        )
 
     def __len__(self) -> int:
         """Return vocabulary size."""

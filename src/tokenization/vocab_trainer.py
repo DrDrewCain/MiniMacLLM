@@ -303,7 +303,8 @@ def test_tokenizer(tokenizer: BPETokenizer, test_texts: List[str]):
     start = time.time()
     tokens2 = tokenizer._tokenize_word(test_word)
     time2 = time.time() - start
-    print(f"  2nd call: {time2:.6f}s (cache hit, ~{time1/time2:.1f}x faster)")
+    speedup = time1/time2 if time2 > 0 else float('inf')
+    print(f"  2nd call: {time2:.6f}s (cache hit, ~{speedup:.1f}x faster)")
 
     # Verify same results
     assert tokens1 == tokens2, "Cached result differs!"
