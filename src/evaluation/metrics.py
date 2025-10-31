@@ -249,6 +249,7 @@ def compute_forgetting_rate(
             task_performances=current_performances
         )
 
+
     # Compute forgetting for each old task
     forgetting_per_task = {}
     for task in common_tasks:
@@ -554,6 +555,10 @@ def quick_eval(
 if __name__ == "__main__":
     # Example usage
     print("Testing evaluation metrics...")
+
+    # Test perplexity
+    dummy_logits = torch.randn(1, 10, 1000)  # [batch, seq_len, vocab]
+    dummy_labels = torch.randint(0, 1000, (1, 10))
 
     print("\n✓ Metrics module ready!")
     print("  - Perplexity computation")
