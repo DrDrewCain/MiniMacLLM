@@ -1,43 +1,89 @@
 """
-Byte-Pair Encoding (BPE) Tokenizer from scratch.
+Byte-Level BPE Tokenizer (Qwen2.5-inspired implementation).
 
-BPE is the most widely used tokenization algorithm for LLMs:
-- GPT-2, GPT-3, GPT-4 (tiktoken)
-- LLaMA 2 (SentencePiece)
-- Most modern LLMs
+Modern byte-level BPE with improvements from:
+- Qwen2.5: Advanced byte-level encoding, robust Unicode handling
+- GPT-2: Byte-to-unicode mapping for printable characters
+- tiktoken: Efficient regex patterns and caching
 
-Algorithm:
-1. Start with character-level tokens
-2. Iteratively merge most frequent byte pairs
-3. Build vocabulary of subwords
+Key improvements over naive BPE:
+1. Byte-level encoding - handles ANY Unicode without unknown tokens
+2. NFC normalization - consistent text representation
+3. LRU caching - fast repeated encodings
+4. Optimized regex - better pre-tokenization
+5. Proper special token handling
 
 References:
-    - "Neural Machine Translation of Rare Words with Subword Units" (Sennrich et al., 2016)
-    - Used in GPT, BERT, RoBERTa, etc.
+    - Qwen2.5 Technical Report (2024): https://arxiv.org/abs/2412.15115
+    - GPT-2: "Language Models are Unsupervised Multitask Learners" (Radford et al., 2019)
+    - tiktoken: https://github.com/openai/tiktoken
 """
 
 import json
 import regex as re
+import unicodedata
 from typing import List, Dict, Tuple, Optional
 from collections import Counter, defaultdict
 from pathlib import Path
+from functools import lru_cache
+
+
+@lru_cache()
+def bytes_to_unicode():
+    """
+    Create bijective mapping from bytes to Unicode strings (GPT-2/Qwen2.5 approach).
+
+    Returns a dictionary mapping all 256 byte values to printable Unicode characters.
+    Avoids mapping to whitespace/control characters by using higher Unicode codepoints.
+
+    This ensures:
+    - All bytes 0-255 are representable as single Unicode characters
+    - No conflicts with actual text characters
+    - Reversible encoding/decoding
+
+    Returns:
+        Dict[int, str]: Mapping from byte (0-255) to Unicode character
+    """
+    # Start with printable ASCII (excludes whitespace/control chars)
+    bs = list(range(ord("!"), ord("~") + 1)) + list(range(ord("¡"), ord("¬") + 1)) + list(range(ord("®"), ord("ÿ") + 1))
+    cs = bs[:]
+    n = 0
+
+    # Map remaining bytes to unused Unicode range
+    for b in range(2**8):
+        if b not in bs:
+            bs.append(b)
+            cs.append(2**8 + n)
+            n += 1
+
+    # Convert to characters
+    cs = [chr(n) for n in cs]
+    return dict(zip(bs, cs))
 
 
 class BPETokenizer:
     """
-    Byte-Pair Encoding tokenizer.
+    Modern Byte-Level BPE Tokenizer (Qwen2.5-inspired).
 
-    Implements the BPE algorithm for subword tokenization.
+    Implements byte-level BPE for robust tokenization of ANY Unicode text.
+
+    Key Features:
+    - Byte-level encoding: No unknown tokens, handles all Unicode
+    - NFC normalization: Consistent representation
+    - Efficient caching: LRU cache + token cache
+    - Qwen2.5 regex: Better pre-tokenization patterns
+    - Special token support: Proper handling of control tokens
 
     Args:
-        vocab_size: Target vocabulary size
-        min_frequency: Minimum frequency for a merge
-        special_tokens: List of special tokens to add
+        vocab_size: Target vocabulary size (default: 32000)
+        min_frequency: Minimum pair frequency for merging (default: 2)
+        special_tokens: List of special tokens (default: ["<|endoftext|>"])
+        normalization: Unicode normalization form ('NFC', 'NFKC', 'NFD', 'NFKD', or None)
 
     Example:
         >>> tokenizer = BPETokenizer(vocab_size=10000)
-        >>> tokenizer.train(["Hello world", "Hello there"])
-        >>> tokens = tokenizer.encode("Hello")
+        >>> tokenizer.train(["Hello world! 你好🌍", "More text"])
+        >>> tokens = tokenizer.encode("Hello 你好")
         >>> text = tokenizer.decode(tokens)
     """
 
@@ -46,14 +92,20 @@ class BPETokenizer:
         vocab_size: int = 32000,
         min_frequency: int = 2,
         special_tokens: Optional[List[str]] = None,
+        normalization: str = 'NFC',
     ):
         self.vocab_size = vocab_size
         self.min_frequency = min_frequency
+        self.normalization = normalization
 
-        # Special tokens
+        # Special tokens (Qwen2.5 style - minimal by default)
         if special_tokens is None:
-            special_tokens = ["<PAD>", "<UNK>", "<BOS>", "<EOS>"]
+            special_tokens = ["<|endoftext|>"]  # GPT-2/Qwen style
         self.special_tokens = special_tokens
+
+        # Byte encoder/decoder for byte-level BPE
+        self.byte_encoder = bytes_to_unicode()
+        self.byte_decoder = {v: k for k, v in self.byte_encoder.items()}
 
         # Vocabulary and merges
         self.vocab: Dict[str, int] = {}
@@ -61,59 +113,69 @@ class BPETokenizer:
         self.merges: Dict[Tuple[str, str], str] = {}
         self.merge_ranks: Dict[Tuple[str, str], int] = {}
 
-        # Regex pattern for pre-tokenization (splits on whitespace and punctuation)
-        # This pattern is similar to GPT-2's tokenizer
+        # Qwen2.5-style regex pattern for pre-tokenization
+        # Handles: contractions, words, numbers, punctuation, whitespace
         self.pattern = re.compile(
-            r"""'s|'t|'re|'ve|'m|'ll|'d| ?\p{L}+| ?\p{N}+| ?[^\s\p{L}\p{N}]+|\s+(?!\S)|\s+""",
-            re.IGNORECASE,
+            r"""(?i:'s|'t|'re|'ve|'m|'ll|'d)|[^\r\n\p{L}\p{N}]?\p{L}+|\p{N}| ?[^\s\p{L}\p{N}]+[\r\n]*|\s*[\r\n]+|\s+(?!\S)|\s+"""
         )
 
-        # Cache for encoding
-        self.cache: Dict[str, List[int]] = {}
+        # BPE cache for faster repeated tokenization
+        self.cache: Dict[str, Tuple[int, ...]] = {}
+
+    def _normalize_text(self, text: str) -> str:
+        """Apply Unicode normalization if configured."""
+        if self.normalization:
+            return unicodedata.normalize(self.normalization, text)
+        return text
 
     def train(self, texts: List[str], verbose: bool = True):
         """
-        Train BPE tokenizer on a corpus.
+        Train byte-level BPE tokenizer on a corpus.
+
+        Uses byte-level encoding to ensure ALL Unicode is handled without unknown tokens.
 
         Args:
             texts: List of text strings to train on
             verbose: Whether to print progress
         """
         if verbose:
-            print(f"Training BPE tokenizer on {len(texts)} texts...")
+            print(f"Training byte-level BPE tokenizer on {len(texts)} texts...")
             print(f"Target vocabulary size: {self.vocab_size}")
 
-        # Step 1: Pre-tokenize into words
-        words = []
+        # Step 1: Pre-tokenize into words and convert to byte-level
+        word_freqs = Counter()
         for text in texts:
-            words.extend(self.pattern.findall(text))
+            # Normalize text first
+            normalized = self._normalize_text(text)
+            # Pre-tokenize using Qwen2.5-style regex
+            words = self.pattern.findall(normalized)
+
+            for word in words:
+                # Convert to byte-level representation
+                byte_word = ''.join(self.byte_encoder[b] for b in word.encode('utf-8'))
+                word_freqs[byte_word] += 1
 
         if verbose:
-            print(f"Pre-tokenized into {len(words)} words")
+            print(f"Pre-tokenized into {len(word_freqs)} unique words")
+            print(f"Total word occurrences: {sum(word_freqs.values())}")
 
-        # Step 2: Split words into characters and count frequencies
-        word_freqs = Counter(words)
-
-        # Convert words to character sequences
-        # We use spaces to separate characters: "hello" -> "h e l l o</w>"
-        # The </w> marker indicates end of word
-        splits = {word: [c for c in word] + ["</w>"] for word in word_freqs.keys()}
-
-        # Step 3: Initialize vocabulary with all characters
-        vocab = set()
-        for word in splits.values():
-            vocab.update(word)
+        # Step 2: Initialize vocabulary with 256 byte tokens
+        # Start with all possible bytes (0-255) mapped to Unicode
+        base_vocab = [''.join(self.byte_encoder[b] for b in bytes([i])) for i in range(256)]
 
         # Add special tokens first
         self.vocab = {token: idx for idx, token in enumerate(self.special_tokens)}
         start_idx = len(self.special_tokens)
 
-        # Add base characters
-        for idx, char in enumerate(sorted(vocab)):
-            self.vocab[char] = start_idx + idx
+        # Add all 256 byte tokens
+        for idx, byte_token in enumerate(base_vocab):
+            self.vocab[byte_token] = start_idx + idx
 
         if verbose:
-            print(f"Initial vocabulary size: {len(self.vocab)}")
+            print(f"Initial vocabulary size: {len(self.vocab)} ({len(self.special_tokens)} special + 256 bytes)")
+
+        # Step 3: Split words into byte-level characters
+        splits = {word: list(word) for word in word_freqs.keys()}
 
         # Step 4: Iteratively merge most frequent pairs
         num_merges = self.vocab_size - len(self.vocab)
@@ -183,24 +245,35 @@ class BPETokenizer:
             print(f"Final vocabulary size: {len(self.vocab)}")
             print(f"Number of merges: {len(self.merges)}")
 
-    def _tokenize_word(self, word: str) -> List[str]:
+    def _tokenize_word(self, word: str) -> Tuple[int, ...]:
         """
-        Tokenize a single word using learned merges.
+        Tokenize a single word using learned merges (byte-level).
+
+        Converts word to byte-level representation, applies BPE merges,
+        then returns token IDs. Uses caching for efficiency.
 
         Args:
-            word: Word to tokenize
+            word: Word to tokenize (will be converted to bytes)
 
         Returns:
-            List of subword tokens
+            Tuple of token IDs (tuple for hashability in cache)
         """
-        # Start with character-level split
-        tokens = [c for c in word] + ["</w>"]
+        # Check cache first
+        if word in self.cache:
+            return self.cache[word]
+
+        # Convert to byte-level representation
+        byte_word = ''.join(self.byte_encoder[b] for b in word.encode('utf-8'))
+
+        # Start with byte-level character split
+        tokens = list(byte_word)
 
         # Apply merges in order of their rank
         while len(tokens) > 1:
             # Find all possible pairs and their ranks
             pairs = [
                 (
+                    i,
                     tokens[i],
                     tokens[i + 1],
                     self.merge_ranks.get((tokens[i], tokens[i + 1]), float("inf")),
@@ -208,82 +281,65 @@ class BPETokenizer:
                 for i in range(len(tokens) - 1)
             ]
 
-            # Find pair with lowest rank (earliest merge)
             if not pairs:
                 break
 
-            best_pair = min(pairs, key=lambda x: x[2])
+            # Find pair with lowest rank (earliest merge)
+            best_pair = min(pairs, key=lambda x: x[3])
 
-            if best_pair[2] == float("inf"):
+            if best_pair[3] == float("inf"):
                 # No more valid merges
                 break
 
             # Merge this pair
-            pair_to_merge = (best_pair[0], best_pair[1])
-            new_token = self.merges[pair_to_merge]
+            i, first, second, _ = best_pair
+            new_token = self.merges[(first, second)]
 
-            # Replace all occurrences
-            new_tokens = []
-            i = 0
-            while i < len(tokens):
-                if i < len(tokens) - 1 and (tokens[i], tokens[i + 1]) == pair_to_merge:
-                    new_tokens.append(new_token)
-                    i += 2
-                else:
-                    new_tokens.append(tokens[i])
-                    i += 1
+            # Rebuild tokens with merge applied
+            tokens = tokens[:i] + [new_token] + tokens[i+2:]
 
-            tokens = new_tokens
+        # Convert tokens to IDs
+        token_ids = tuple(self.vocab.get(token, self.vocab.get(self.special_tokens[0], 0)) for token in tokens)
 
-        return tokens
+        # Cache result (limit cache size)
+        if len(self.cache) < 50000:
+            self.cache[word] = token_ids
 
-    def encode(self, text: str, add_special_tokens: bool = True) -> List[int]:
+        return token_ids
+
+    def encode(self, text: str, add_special_tokens: bool = False) -> List[int]:
         """
-        Encode text to token IDs.
+        Encode text to token IDs using byte-level BPE.
 
         Args:
             text: Text to encode
-            add_special_tokens: Whether to add BOS/EOS tokens
+            add_special_tokens: Whether to add endoftext token (Qwen2.5 style)
 
         Returns:
             List of token IDs
         """
-        # Check cache
-        cache_key = (text, add_special_tokens)
-        if cache_key in self.cache:
-            return self.cache[cache_key]
+        # Normalize text
+        normalized = self._normalize_text(text)
 
-        # Pre-tokenize into words
-        words = self.pattern.findall(text)
+        # Pre-tokenize using Qwen2.5-style regex
+        words = self.pattern.findall(normalized)
 
         # Tokenize each word
         tokens = []
 
-        if add_special_tokens:
-            tokens.append(self.vocab["<BOS>"])
-
         for word in words:
-            word_tokens = self._tokenize_word(word)
+            word_token_ids = self._tokenize_word(word)
+            tokens.extend(word_token_ids)
 
-            for token in word_tokens:
-                if token in self.vocab:
-                    tokens.append(self.vocab[token])
-                else:
-                    # Unknown token
-                    tokens.append(self.vocab["<UNK>"])
+        if add_special_tokens and self.special_tokens:
+            # Add endoftext token at the end (Qwen2.5/GPT-2 style)
+            tokens.append(self.vocab[self.special_tokens[0]])
 
-        if add_special_tokens:
-            tokens.append(self.vocab["<EOS>"])
-
-        # Cache result
-        if len(self.cache) < 10000:  # Limit cache size
-            self.cache[cache_key] = tokens
-
-        return tokens
+        return list(tokens)
 
     def decode(self, token_ids: List[int], skip_special_tokens: bool = True) -> str:
         """
-        Decode token IDs to text.
+        Decode token IDs to text using byte-level decoding.
 
         Args:
             token_ids: List of token IDs
@@ -292,6 +348,7 @@ class BPETokenizer:
         Returns:
             Decoded text
         """
+        # Convert IDs to tokens
         tokens = []
 
         for token_id in token_ids:
@@ -303,13 +360,20 @@ class BPETokenizer:
                     continue
 
                 tokens.append(token)
-            else:
-                tokens.append("<UNK>")
 
-        # Join tokens and remove end-of-word markers
-        text = "".join(tokens).replace("</w>", " ")
+        # Join tokens and decode from byte-level representation
+        byte_string = ''.join(tokens)
 
-        return text.strip()
+        # Convert byte-level characters back to actual bytes
+        try:
+            byte_array = bytearray([self.byte_decoder[c] for c in byte_string])
+            # Decode from UTF-8
+            text = byte_array.decode('utf-8', errors='replace')
+        except (KeyError, UnicodeDecodeError):
+            # Fallback for malformed sequences
+            text = byte_string
+
+        return text
 
     def save(self, save_path: str):
         """
@@ -339,12 +403,13 @@ class BPETokenizer:
             "vocab_size": self.vocab_size,
             "min_frequency": self.min_frequency,
             "special_tokens": self.special_tokens,
+            "normalization": self.normalization,
         }
 
         with open(save_path / "config.json", "w", encoding="utf-8") as f:
             json.dump(config, f, ensure_ascii=False, indent=2)
 
-        print(f"Tokenizer saved to {save_path}")
+        print(f"✓ Byte-level BPE tokenizer saved to {save_path}")
 
     @classmethod
     def load(cls, load_path: str) -> "BPETokenizer":
@@ -368,6 +433,7 @@ class BPETokenizer:
             vocab_size=config["vocab_size"],
             min_frequency=config["min_frequency"],
             special_tokens=config["special_tokens"],
+            normalization=config.get("normalization", "NFC"),
         )
 
         # Load vocabulary
@@ -385,7 +451,7 @@ class BPETokenizer:
             tokenizer.merges[pair] = merge_data["token"]
             tokenizer.merge_ranks[pair] = merge_data["rank"]
 
-        print(f"Tokenizer loaded from {load_path}")
+        print(f"✓ Byte-level BPE tokenizer loaded from {load_path}")
 
         return tokenizer
 
@@ -411,63 +477,98 @@ class BPETokenizer:
 
 
 if __name__ == "__main__":
-    # Test BPE tokenizer
-    print("Testing BPE Tokenizer...")
+    # Test Byte-Level BPE tokenizer
+    print("=" * 70)
+    print("Testing Byte-Level BPE Tokenizer (Qwen2.5-inspired)")
+    print("=" * 70)
 
-    # Create sample corpus
+    # Create sample corpus with challenging Unicode
     corpus = [
         "The quick brown fox jumps over the lazy dog.",
-        "The dog was not amused by the fox.",
-        "Machine learning is a subset of artificial intelligence.",
-        "Deep learning models can learn complex patterns from data.",
-        "Natural language processing enables computers to understand human language.",
-        "Python is a high-level programming language.",
-        "Python programming is used for data science and machine learning.",
-        "The transformer architecture revolutionized natural language processing.",
+        "Hello, world! 你好世界 🌍",
+        "Machine learning is transforming AI.",
+        "Python 🐍 is widely used in data science.",
+        "émojis and àccents are handled correctly.",
+        "Special characters: @#$%^&*()_+-=[]{}|;':\",./<>?",
+        "Emojis: 😀😃😄😁😆😅🤣😂",
+        "Math: ∑∏∫√∞≈≠±×÷",
     ]
 
     # Train tokenizer
-    tokenizer = BPETokenizer(vocab_size=500, min_frequency=2)
+    print("\n1. Training byte-level tokenizer...")
+    tokenizer = BPETokenizer(vocab_size=500, min_frequency=1, normalization='NFC')
     tokenizer.train(corpus, verbose=True)
 
-    # Test encoding
-    print("\n" + "=" * 60)
-    print("Testing Encoding/Decoding")
-    print("=" * 60)
+    # Test encoding/decoding with various Unicode
+    print("\n2. Testing encoding/decoding with Unicode...")
+    print("=" * 70)
 
-    test_text = "The quick brown fox"
-    print(f"\nOriginal text: '{test_text}'")
+    test_cases = [
+        "Hello, world!",
+        "你好世界 🌍",
+        "Python 🐍 rocks!",
+        "émojis and àccents",
+        "Math: ∑∏∫√",
+        "Mixed: Hello你好🌍",
+    ]
 
-    tokens = tokenizer.encode(test_text, add_special_tokens=True)
-    print(f"Encoded tokens: {tokens}")
-    print(f"Number of tokens: {len(tokens)}")
+    for text in test_cases:
+        print(f"\nOriginal: '{text}'")
+        tokens = tokenizer.encode(text)
+        decoded = tokenizer.decode(tokens)
+        print(f"Tokens: {tokens[:10]}{'...' if len(tokens) > 10 else ''} (count: {len(tokens)})")
+        print(f"Decoded: '{decoded}'")
+        print(f"✓ Match: {text == decoded}")
 
-    # Show token strings
-    token_strings = [tokenizer.inverse_vocab.get(t, "<UNK>") for t in tokens]
-    print(f"Token strings: {token_strings}")
-
-    decoded = tokenizer.decode(tokens, skip_special_tokens=True)
-    print(f"Decoded text: '{decoded}'")
-    print(f"Match: {test_text.lower() == decoded.lower()}")
+    # Test with special tokens
+    print("\n3. Testing special token handling...")
+    print("=" * 70)
+    test_text = "Hello, world!"
+    tokens_with_special = tokenizer.encode(test_text, add_special_tokens=True)
+    tokens_without_special = tokenizer.encode(test_text, add_special_tokens=False)
+    print(f"Without special: {len(tokens_without_special)} tokens")
+    print(f"With special: {len(tokens_with_special)} tokens")
+    print(f"Special token added: {tokens_with_special[-1] == tokenizer.vocab['<|endoftext|>']}")
 
     # Test save/load
-    print("\n" + "=" * 60)
-    print("Testing Save/Load")
-    print("=" * 60)
+    print("\n4. Testing save/load...")
+    print("=" * 70)
 
-    save_dir = "test_tokenizer"
+    save_dir = "test_byte_tokenizer"
     tokenizer.save(save_dir)
 
     loaded_tokenizer = BPETokenizer.load(save_dir)
-    print(f"\nLoaded tokenizer: {loaded_tokenizer}")
+    print(f"Loaded: {loaded_tokenizer}")
 
-    # Test loaded tokenizer
-    loaded_tokens = loaded_tokenizer.encode(test_text, add_special_tokens=True)
-    print(f"Tokens match: {tokens == loaded_tokens}")
+    # Verify loaded tokenizer works
+    test_text = "Hello, world! 你好🌍"
+    original_tokens = tokenizer.encode(test_text)
+    loaded_tokens = loaded_tokenizer.encode(test_text)
+    print(f"✓ Tokens match: {original_tokens == loaded_tokens}")
+
+    # Test edge cases
+    print("\n5. Testing edge cases...")
+    print("=" * 70)
+    edge_cases = [
+        "",  # Empty string
+        " ",  # Single space
+        "\n\n\n",  # Multiple newlines
+        "a" * 100,  # Long repetition
+    ]
+
+    for text in edge_cases:
+        try:
+            tokens = tokenizer.encode(text)
+            decoded = tokenizer.decode(tokens)
+            status = "✓" if text == decoded else "✗"
+            print(f"{status} Edge case (len={len(text)}): encoded to {len(tokens)} tokens")
+        except Exception as e:
+            print(f"✗ Edge case failed: {e}")
 
     # Cleanup
     import shutil
-
     shutil.rmtree(save_dir)
 
-    print("\n✓ BPE Tokenizer implementation complete!")
+    print("\n" + "=" * 70)
+    print("✓ Byte-level BPE tokenizer implementation complete!")
+    print("=" * 70)
