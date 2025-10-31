@@ -38,8 +38,8 @@ def main():
 
     # Special tokens
     parser.add_argument("--special_tokens", type=str, nargs='+',
-                       default=["<PAD>", "<UNK>", "<BOS>", "<EOS>"],
-                       help="Special tokens to add")
+                       default=["<|endoftext|>"],
+                       help="Special tokens to add (default: <|endoftext|> for byte-level BPE)")
 
     # Limits
     parser.add_argument("--max_lines", type=int,

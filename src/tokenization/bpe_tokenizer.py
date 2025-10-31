@@ -23,7 +23,7 @@ import json
 import regex as re
 import unicodedata
 from typing import List, Dict, Tuple, Optional
-from collections import Counter, defaultdict
+from collections import Counter, defaultdict, OrderedDict
 from pathlib import Path
 from functools import lru_cache
 
@@ -123,8 +123,9 @@ class BPETokenizer:
             r"""(?i:'s|'t|'re|'ve|'m|'ll|'d)|[^\r\n\p{L}\p{N}]?\p{L}+|\p{N}| ?[^\s\p{L}\p{N}]+[\r\n]*|\s*[\r\n]+|\s+(?!\S)|\s+"""
         )
 
-        # BPE cache for faster repeated tokenization
-        self.cache: Dict[str, Tuple[int, ...]] = {}
+        # BPE cache with LRU eviction for faster repeated tokenization
+        self.cache: OrderedDict[str, Tuple[int, ...]] = OrderedDict()
+        self.cache_maxsize = 50000
 
     def _normalize_text(self, text: str) -> str:
         """Apply Unicode normalization if configured."""
@@ -264,8 +265,9 @@ class BPETokenizer:
         Returns:
             Tuple of token IDs (tuple for hashability in cache)
         """
-        # Check cache first
+        # Check cache first (and move to end for LRU)
         if word in self.cache:
+            self.cache.move_to_end(word)
             return self.cache[word]
 
         # Convert to byte-level representation
@@ -303,19 +305,27 @@ class BPETokenizer:
             new_token = self.merges[pair_to_merge]
 
             # Apply merge only once per iteration to maintain O(n log n) complexity
-            # Rebuild tokens list (could be optimized further with deque or linked list)
-            tokens = tokens[:i] + [new_token] + tokens[i + 2 :]
+            # Rebuild tokens list using unpacking for better performance
+            tokens = [*tokens[:i], new_token, *tokens[i + 2 :]]
 
         # Convert tokens to IDs
-        # Note: All tokens should exist in vocab after training; if not, it's an error
-        token_ids = tuple(
-            self.vocab[token] if token in self.vocab else self.vocab[self.special_tokens[0]]
-            for token in tokens
-        )
+        # Note: With byte-level BPE, all tokens MUST exist in vocab after training
+        token_ids = []
+        for token in tokens:
+            if token not in self.vocab:
+                raise ValueError(
+                    f"Token '{token}' not found in vocabulary. "
+                    "This should not happen with byte-level BPE. "
+                    "Ensure the tokenizer has been properly trained."
+                )
+            token_ids.append(self.vocab[token])
+        token_ids = tuple(token_ids)
 
-        # Cache result (limit cache size)
-        if len(self.cache) < 50000:
-            self.cache[word] = token_ids
+        # Cache result with LRU eviction
+        if len(self.cache) >= self.cache_maxsize:
+            # Remove oldest entry (first item in OrderedDict)
+            self.cache.popitem(last=False)
+        self.cache[word] = token_ids
 
         return token_ids
 
