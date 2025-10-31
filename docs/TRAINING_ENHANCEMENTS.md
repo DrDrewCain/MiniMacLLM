@@ -292,6 +292,5 @@ python scripts/continual_learn.py \
 
 ## References
 
-- Issue: DrDrewCain/MiniMacLLM#[issue_number]
 - Related: Evaluation metrics in `src/evaluation/metrics.py`
 - Tests: `tests/unit/test_pretrain_enhancements.py`

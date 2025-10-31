@@ -23,7 +23,6 @@ sys.path.append(str(Path(__file__).parent.parent))
 
 from src.model.llm import ContinualLLM, ModelConfig
 from src.tokenization.bpe_tokenizer import BPETokenizer
-from src.evaluation.metrics import compute_perplexity
 
 
 class TextDataset(Dataset):
