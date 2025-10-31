@@ -74,7 +74,7 @@ class Experience:
         # Convert to bytes without numpy (for compatibility when numpy is unavailable)
         # Use tolist() and convert to string for hashing
         tensor_list = self.input_ids.cpu().tolist()
-        tensor_str = str(tensor_list).encode('utf-8')
+        tensor_str = str(tensor_list).encode("utf-8")
         return hashlib.md5(tensor_str).hexdigest()
 
 
