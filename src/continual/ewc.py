@@ -23,7 +23,7 @@ References:
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from typing import Dict, Optional, List
+from typing import Dict, Optional
 from dataclasses import dataclass
 from tqdm import tqdm
 
@@ -40,6 +40,7 @@ class EWCConfig:
         normalize_fisher: Whether to normalize Fisher values
         online: Whether to use online EWC (accumulate Fisher over tasks)
     """
+
     lambda_ewc: float = 1000.0
     fisher_samples: int = 200
     fisher_estimate_mode: str = "diagonal"
@@ -73,18 +74,12 @@ class EWC:
         ...     loss.backward()
     """
 
-    def __init__(
-        self,
-        model: nn.Module,
-        config: EWCConfig,
-        device: str = "cpu"
-    ):
+    def __init__(self, model: nn.Module, config: EWCConfig, device: str = "cpu"):
         self.config = config
         self.device = device
 
         # Store parameter names (only parameters with gradients)
-        self.param_names = [name for name, param in model.named_parameters()
-                           if param.requires_grad]
+        self.param_names = [name for name, param in model.named_parameters() if param.requires_grad]
 
         # Storage for Fisher information and old parameters
         self.fisher: Dict[str, torch.Tensor] = {}
@@ -94,10 +89,7 @@ class EWC:
         self.task_count = 0
 
     def compute_fisher_information(
-        self,
-        model: nn.Module,
-        dataloader,
-        max_samples: Optional[int] = None
+        self, model: nn.Module, dataloader, max_samples: Optional[int] = None
     ):
         """
         Compute Fisher Information Matrix.
@@ -118,9 +110,11 @@ class EWC:
         max_samples = max_samples or self.config.fisher_samples
 
         # Initialize Fisher dictionary
-        fisher = {name: torch.zeros_like(param, device=self.device)
-                 for name, param in model.named_parameters()
-                 if param.requires_grad}
+        fisher = {
+            name: torch.zeros_like(param, device=self.device)
+            for name, param in model.named_parameters()
+            if param.requires_grad
+        }
 
         # Sample counter
         num_samples = 0
@@ -132,8 +126,8 @@ class EWC:
 
             # Move batch to device
             if isinstance(batch, dict):
-                input_ids = batch['input_ids'].to(self.device)
-                labels = batch.get('labels', input_ids).to(self.device)
+                input_ids = batch["input_ids"].to(self.device)
+                labels = batch.get("labels", input_ids).to(self.device)
             elif isinstance(batch, (tuple, list)) and len(batch) >= 2:
                 input_ids = batch[0].to(self.device)
                 labels = batch[1].to(self.device)
@@ -146,9 +140,9 @@ class EWC:
             # Forward pass
             model.zero_grad()
 
-            if hasattr(model, 'forward'):
+            if hasattr(model, "forward"):
                 # Standard model
-                if hasattr(model, 'base_model'):
+                if hasattr(model, "base_model"):
                     # LoRA wrapped model
                     outputs = model.base_model(input_ids)
                     logits = outputs[0] if isinstance(outputs, tuple) else outputs
@@ -168,7 +162,7 @@ class EWC:
                 loss = F.cross_entropy(
                     shift_logits.view(-1, shift_logits.size(-1)),
                     shift_labels.view(-1),
-                    reduction='sum'  # Sum over batch for Fisher
+                    reduction="sum",  # Sum over batch for Fisher
                 )
             else:
                 # If no labels, use entropy of predictions
@@ -198,8 +192,7 @@ class EWC:
             # Online EWC: accumulate Fisher
             for name in fisher:
                 if name in self.fisher:
-                    self.fisher[name] = (self.config.gamma * self.fisher[name] +
-                                        fisher[name])
+                    self.fisher[name] = self.config.gamma * self.fisher[name] + fisher[name]
                 else:
                     self.fisher[name] = fisher[name]
         else:
@@ -207,9 +200,11 @@ class EWC:
             self.fisher = fisher
 
         # Store current parameters as "old" parameters
-        self.old_params = {name: param.detach().clone()
-                          for name, param in model.named_parameters()
-                          if param.requires_grad}
+        self.old_params = {
+            name: param.detach().clone()
+            for name, param in model.named_parameters()
+            if param.requires_grad
+        }
 
         self.task_count += 1
 
@@ -254,10 +249,10 @@ class EWC:
     def save(self, path: str):
         """Save EWC state (Fisher and old parameters)."""
         state = {
-            'fisher': self.fisher,
-            'old_params': self.old_params,
-            'task_count': self.task_count,
-            'config': self.config.__dict__
+            "fisher": self.fisher,
+            "old_params": self.old_params,
+            "task_count": self.task_count,
+            "config": self.config.__dict__,
         }
         torch.save(state, path)
         print(f"Saved EWC state to {path}")
@@ -266,9 +261,9 @@ class EWC:
         """Load EWC state."""
         state = torch.load(path, map_location=self.device)
 
-        self.fisher = {k: v.to(self.device) for k, v in state['fisher'].items()}
-        self.old_params = {k: v.to(self.device) for k, v in state['old_params'].items()}
-        self.task_count = state['task_count']
+        self.fisher = {k: v.to(self.device) for k, v in state["fisher"].items()}
+        self.old_params = {k: v.to(self.device) for k, v in state["old_params"].items()}
+        self.task_count = state["task_count"]
 
         print(f"Loaded EWC state from {path} (task {self.task_count})")
 
@@ -280,11 +275,11 @@ class EWC:
         fisher_values = torch.cat([f.flatten() for f in self.fisher.values()])
 
         return {
-            'mean_importance': fisher_values.mean().item(),
-            'std_importance': fisher_values.std().item(),
-            'max_importance': fisher_values.max().item(),
-            'min_importance': fisher_values.min().item(),
-            'total_importance': fisher_values.sum().item()
+            "mean_importance": fisher_values.mean().item(),
+            "std_importance": fisher_values.std().item(),
+            "max_importance": fisher_values.max().item(),
+            "min_importance": fisher_values.min().item(),
+            "total_importance": fisher_values.sum().item(),
         }
 
 
@@ -309,12 +304,7 @@ class OnlineEWC(EWC):
         super().__init__(model, config, device)
 
 
-def consolidate_model_knowledge(
-    model: nn.Module,
-    dataloader,
-    ewc: EWC,
-    device: str = "cpu"
-):
+def consolidate_model_knowledge(model: nn.Module, dataloader, ewc: EWC, device: str = "cpu"):
     """
     Convenience function to consolidate knowledge after learning a task.
 
@@ -356,8 +346,9 @@ if __name__ == "__main__":
     # Create dummy data
     class DummyDataset:
         def __init__(self, num_samples=100):
-            self.data = [(torch.randn(2, 10), torch.randint(0, 10, (2, 10)))
-                        for _ in range(num_samples // 2)]
+            self.data = [
+                (torch.randn(2, 10), torch.randint(0, 10, (2, 10))) for _ in range(num_samples // 2)
+            ]
 
         def __iter__(self):
             return iter(self.data)
@@ -368,11 +359,7 @@ if __name__ == "__main__":
     dataset = DummyDataset(num_samples=50)
 
     # Create EWC
-    config = EWCConfig(
-        lambda_ewc=1000.0,
-        fisher_samples=20,
-        normalize_fisher=True
-    )
+    config = EWCConfig(lambda_ewc=1000.0, fisher_samples=20, normalize_fisher=True)
 
     ewc = EWC(model, config)
 
@@ -388,10 +375,6 @@ if __name__ == "__main__":
 
     # Simulate training on task B
     print("\nSimulating training on task B...")
-
-    # Get current parameters
-    old_weights = {name: param.clone().detach()
-                  for name, param in model.named_parameters()}
 
     # Compute penalty before update
     penalty_before = ewc.penalty(model)
@@ -419,6 +402,7 @@ if __name__ == "__main__":
     print(f"Matches original: {torch.allclose(penalty_after, penalty_loaded)}")
 
     import os
+
     os.remove("test_ewc.pt")
 
     print("\n✓ EWC implementation complete!")

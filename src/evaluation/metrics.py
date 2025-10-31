@@ -249,6 +249,7 @@ def compute_forgetting_rate(
             task_performances=current_performances
         )
 
+
     # Compute forgetting for each old task
     forgetting_per_task = {}
     for task in common_tasks:

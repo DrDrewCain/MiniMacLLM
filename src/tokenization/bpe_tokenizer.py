@@ -18,10 +18,9 @@ References:
 
 import json
 import regex as re
-from typing import List, Dict, Tuple, Optional, Set
+from typing import List, Dict, Tuple, Optional
 from collections import Counter, defaultdict
 from pathlib import Path
-import pickle
 
 
 class BPETokenizer:
@@ -46,7 +45,7 @@ class BPETokenizer:
         self,
         vocab_size: int = 32000,
         min_frequency: int = 2,
-        special_tokens: Optional[List[str]] = None
+        special_tokens: Optional[List[str]] = None,
     ):
         self.vocab_size = vocab_size
         self.min_frequency = min_frequency
@@ -66,7 +65,7 @@ class BPETokenizer:
         # This pattern is similar to GPT-2's tokenizer
         self.pattern = re.compile(
             r"""'s|'t|'re|'ve|'m|'ll|'d| ?\p{L}+| ?\p{N}+| ?[^\s\p{L}\p{N}]+|\s+(?!\S)|\s+""",
-            re.IGNORECASE
+            re.IGNORECASE,
         )
 
         # Cache for encoding
@@ -98,7 +97,7 @@ class BPETokenizer:
         # Convert words to character sequences
         # We use spaces to separate characters: "hello" -> "h e l l o</w>"
         # The </w> marker indicates end of word
-        splits = {word: [c for c in word] + ['</w>'] for word in word_freqs.keys()}
+        splits = {word: [c for c in word] + ["</w>"] for word in word_freqs.keys()}
 
         # Step 3: Initialize vocabulary with all characters
         vocab = set()
@@ -170,9 +169,11 @@ class BPETokenizer:
             self.merge_ranks[best_pair] = merge_idx
 
             if verbose and (merge_idx + 1) % 500 == 0:
-                print(f"Merge {merge_idx + 1}/{num_merges}: "
-                      f"{best_pair[0]} + {best_pair[1]} = {new_token} "
-                      f"(freq: {pair_freq})")
+                print(
+                    f"Merge {merge_idx + 1}/{num_merges}: "
+                    f"{best_pair[0]} + {best_pair[1]} = {new_token} "
+                    f"(freq: {pair_freq})"
+                )
 
         # Create inverse vocabulary
         self.inverse_vocab = {idx: token for token, idx in self.vocab.items()}
@@ -193,13 +194,19 @@ class BPETokenizer:
             List of subword tokens
         """
         # Start with character-level split
-        tokens = [c for c in word] + ['</w>']
+        tokens = [c for c in word] + ["</w>"]
 
         # Apply merges in order of their rank
         while len(tokens) > 1:
             # Find all possible pairs and their ranks
-            pairs = [(tokens[i], tokens[i + 1], self.merge_ranks.get((tokens[i], tokens[i + 1]), float('inf')))
-                    for i in range(len(tokens) - 1)]
+            pairs = [
+                (
+                    tokens[i],
+                    tokens[i + 1],
+                    self.merge_ranks.get((tokens[i], tokens[i + 1]), float("inf")),
+                )
+                for i in range(len(tokens) - 1)
+            ]
 
             # Find pair with lowest rank (earliest merge)
             if not pairs:
@@ -207,7 +214,7 @@ class BPETokenizer:
 
             best_pair = min(pairs, key=lambda x: x[2])
 
-            if best_pair[2] == float('inf'):
+            if best_pair[2] == float("inf"):
                 # No more valid merges
                 break
 
@@ -300,7 +307,7 @@ class BPETokenizer:
                 tokens.append("<UNK>")
 
         # Join tokens and remove end-of-word markers
-        text = ''.join(tokens).replace('</w>', ' ')
+        text = "".join(tokens).replace("</w>", " ")
 
         return text.strip()
 
@@ -315,30 +322,32 @@ class BPETokenizer:
         save_path.mkdir(parents=True, exist_ok=True)
 
         # Save vocabulary
-        with open(save_path / "vocab.json", 'w', encoding='utf-8') as f:
+        with open(save_path / "vocab.json", "w", encoding="utf-8") as f:
             json.dump(self.vocab, f, ensure_ascii=False, indent=2)
 
         # Save merges
-        merges_list = [{"pair": list(pair), "token": token, "rank": self.merge_ranks[pair]}
-                      for pair, token in self.merges.items()]
+        merges_list = [
+            {"pair": list(pair), "token": token, "rank": self.merge_ranks[pair]}
+            for pair, token in self.merges.items()
+        ]
 
-        with open(save_path / "merges.json", 'w', encoding='utf-8') as f:
+        with open(save_path / "merges.json", "w", encoding="utf-8") as f:
             json.dump(merges_list, f, ensure_ascii=False, indent=2)
 
         # Save config
         config = {
-            'vocab_size': self.vocab_size,
-            'min_frequency': self.min_frequency,
-            'special_tokens': self.special_tokens
+            "vocab_size": self.vocab_size,
+            "min_frequency": self.min_frequency,
+            "special_tokens": self.special_tokens,
         }
 
-        with open(save_path / "config.json", 'w', encoding='utf-8') as f:
+        with open(save_path / "config.json", "w", encoding="utf-8") as f:
             json.dump(config, f, ensure_ascii=False, indent=2)
 
         print(f"Tokenizer saved to {save_path}")
 
     @classmethod
-    def load(cls, load_path: str) -> 'BPETokenizer':
+    def load(cls, load_path: str) -> "BPETokenizer":
         """
         Load tokenizer from disk.
 
@@ -351,30 +360,30 @@ class BPETokenizer:
         load_path = Path(load_path)
 
         # Load config
-        with open(load_path / "config.json", 'r', encoding='utf-8') as f:
+        with open(load_path / "config.json", "r", encoding="utf-8") as f:
             config = json.load(f)
 
         # Create tokenizer
         tokenizer = cls(
-            vocab_size=config['vocab_size'],
-            min_frequency=config['min_frequency'],
-            special_tokens=config['special_tokens']
+            vocab_size=config["vocab_size"],
+            min_frequency=config["min_frequency"],
+            special_tokens=config["special_tokens"],
         )
 
         # Load vocabulary
-        with open(load_path / "vocab.json", 'r', encoding='utf-8') as f:
+        with open(load_path / "vocab.json", "r", encoding="utf-8") as f:
             tokenizer.vocab = json.load(f)
 
         tokenizer.inverse_vocab = {int(idx): token for token, idx in tokenizer.vocab.items()}
 
         # Load merges
-        with open(load_path / "merges.json", 'r', encoding='utf-8') as f:
+        with open(load_path / "merges.json", "r", encoding="utf-8") as f:
             merges_list = json.load(f)
 
         for merge_data in merges_list:
-            pair = tuple(merge_data['pair'])
-            tokenizer.merges[pair] = merge_data['token']
-            tokenizer.merge_ranks[pair] = merge_data['rank']
+            pair = tuple(merge_data["pair"])
+            tokenizer.merges[pair] = merge_data["token"]
+            tokenizer.merge_ranks[pair] = merge_data["rank"]
 
         print(f"Tokenizer loaded from {load_path}")
 
@@ -394,9 +403,11 @@ class BPETokenizer:
 
     def __repr__(self) -> str:
         """String representation."""
-        return (f"BPETokenizer(vocab_size={len(self.vocab)}, "
-                f"merges={len(self.merges)}, "
-                f"special_tokens={len(self.special_tokens)})")
+        return (
+            f"BPETokenizer(vocab_size={len(self.vocab)}, "
+            f"merges={len(self.merges)}, "
+            f"special_tokens={len(self.special_tokens)})"
+        )
 
 
 if __name__ == "__main__":
@@ -412,7 +423,7 @@ if __name__ == "__main__":
         "Natural language processing enables computers to understand human language.",
         "Python is a high-level programming language.",
         "Python programming is used for data science and machine learning.",
-        "The transformer architecture revolutionized natural language processing."
+        "The transformer architecture revolutionized natural language processing.",
     ]
 
     # Train tokenizer
@@ -420,9 +431,9 @@ if __name__ == "__main__":
     tokenizer.train(corpus, verbose=True)
 
     # Test encoding
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("Testing Encoding/Decoding")
-    print("="*60)
+    print("=" * 60)
 
     test_text = "The quick brown fox"
     print(f"\nOriginal text: '{test_text}'")
@@ -440,9 +451,9 @@ if __name__ == "__main__":
     print(f"Match: {test_text.lower() == decoded.lower()}")
 
     # Test save/load
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("Testing Save/Load")
-    print("="*60)
+    print("=" * 60)
 
     save_dir = "test_tokenizer"
     tokenizer.save(save_dir)
@@ -456,6 +467,7 @@ if __name__ == "__main__":
 
     # Cleanup
     import shutil
+
     shutil.rmtree(save_dir)
 
     print("\n✓ BPE Tokenizer implementation complete!")

@@ -39,12 +39,8 @@ class TestRotaryPositionEmbedding:
         rope = RotaryPositionEmbedding(dim=dim, max_seq_len=100, base=base)
 
         # Check that inv_freq follows the formula: 1 / (base ^ (2i/dim))
-        inv_freq_expected = 1.0 / (base ** (torch.arange(0, dim, 2).float() / dim))
-
-        # The actual inv_freq is stored in the frequencies
-        # We can check the first position
-        cos_0 = rope.cos_cached[0]  # cos at position 0
         # At position 0, cos should be 1 (cos(0) = 1)
+        cos_0 = rope.cos_cached[0]  # cos at position 0
         assert torch.allclose(cos_0, torch.ones_like(cos_0), atol=1e-6)
 
     def test_position_dependence(self):

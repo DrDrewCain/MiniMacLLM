@@ -16,7 +16,7 @@ References:
 
 import torch
 import numpy as np
-from typing import List, Dict, Optional, Tuple, Any
+from typing import List, Dict, Optional, Any
 from dataclasses import dataclass, field
 from collections import deque
 import random
@@ -35,6 +35,7 @@ class Experience:
         domain: Domain/task label (e.g., "math", "code", "general")
         metadata: Additional information (loss, timestamp, etc.)
     """
+
     input_ids: torch.Tensor
     labels: torch.Tensor
     importance: float = 1.0
@@ -43,33 +44,38 @@ class Experience:
 
     def __post_init__(self):
         """Validate experience."""
-        assert self.input_ids.shape == self.labels.shape, \
-            "input_ids and labels must have same shape"
+        assert (
+            self.input_ids.shape == self.labels.shape
+        ), "input_ids and labels must have same shape"
 
     def to_dict(self) -> Dict:
         """Convert to dictionary for storage."""
         return {
-            'input_ids': self.input_ids,
-            'labels': self.labels,
-            'importance': self.importance,
-            'domain': self.domain,
-            'metadata': self.metadata
+            "input_ids": self.input_ids,
+            "labels": self.labels,
+            "importance": self.importance,
+            "domain": self.domain,
+            "metadata": self.metadata,
         }
 
     @classmethod
-    def from_dict(cls, data: Dict) -> 'Experience':
+    def from_dict(cls, data: Dict) -> "Experience":
         """Create experience from dictionary."""
         return cls(
-            input_ids=data['input_ids'],
-            labels=data['labels'],
-            importance=data.get('importance', 1.0),
-            domain=data.get('domain'),
-            metadata=data.get('metadata', {})
+            input_ids=data["input_ids"],
+            labels=data["labels"],
+            importance=data.get("importance", 1.0),
+            domain=data.get("domain"),
+            metadata=data.get("metadata", {}),
         )
 
     def get_hash(self) -> str:
         """Get hash of input for deduplication."""
-        return hashlib.md5(self.input_ids.cpu().numpy().tobytes()).hexdigest()
+        # Convert to bytes without numpy (for compatibility when numpy is unavailable)
+        # Use tolist() and convert to string for hashing
+        tensor_list = self.input_ids.cpu().tolist()
+        tensor_str = str(tensor_list).encode("utf-8")
+        return hashlib.md5(tensor_str).hexdigest()
 
 
 class ExperienceReplayBuffer:
@@ -103,7 +109,7 @@ class ExperienceReplayBuffer:
         max_size: int = 10000,
         sampling_strategy: str = "importance",
         importance_decay: float = 1.0,
-        device: str = "cpu"
+        device: str = "cpu",
     ):
         self.max_size = max_size
         self.sampling_strategy = sampling_strategy
@@ -121,18 +127,9 @@ class ExperienceReplayBuffer:
         self.seen_hashes: set = set()
 
         # Statistics
-        self.stats = {
-            'added': 0,
-            'replaced': 0,
-            'duplicates': 0,
-            'samples_drawn': 0
-        }
+        self.stats = {"added": 0, "replaced": 0, "duplicates": 0, "samples_drawn": 0}
 
-    def add(
-        self,
-        experience: Experience,
-        allow_duplicates: bool = False
-    ) -> bool:
+    def add(self, experience: Experience, allow_duplicates: bool = False) -> bool:
         """
         Add experience to buffer.
 
@@ -149,7 +146,7 @@ class ExperienceReplayBuffer:
         if not allow_duplicates:
             exp_hash = experience.get_hash()
             if exp_hash in self.seen_hashes:
-                self.stats['duplicates'] += 1
+                self.stats["duplicates"] += 1
                 return False
             self.seen_hashes.add(exp_hash)
 
@@ -162,7 +159,7 @@ class ExperienceReplayBuffer:
             # Buffer not full, just add
             self.buffer.append(experience)
             self.size += 1
-            self.stats['added'] += 1
+            self.stats["added"] += 1
             return True
         else:
             # Buffer full, need replacement strategy
@@ -193,7 +190,7 @@ class ExperienceReplayBuffer:
                 self.seen_hashes.discard(old_hash)
                 # Replace
                 self.buffer[idx] = new_experience
-                self.stats['replaced'] += 1
+                self.stats["replaced"] += 1
                 return True
             return False
 
@@ -210,7 +207,7 @@ class ExperienceReplayBuffer:
                 self.seen_hashes.discard(old_hash)
                 # Replace
                 self.buffer[idx] = new_experience
-                self.stats['replaced'] += 1
+                self.stats["replaced"] += 1
                 return True
             return False
 
@@ -220,14 +217,10 @@ class ExperienceReplayBuffer:
             old_hash = self.buffer[idx].get_hash()
             self.seen_hashes.discard(old_hash)
             self.buffer[idx] = new_experience
-            self.stats['replaced'] += 1
+            self.stats["replaced"] += 1
             return True
 
-    def sample(
-        self,
-        batch_size: int,
-        importance_weighted: bool = None
-    ) -> List[Experience]:
+    def sample(self, batch_size: int, importance_weighted: bool = None) -> List[Experience]:
         """
         Sample a batch of experiences.
 
@@ -245,37 +238,27 @@ class ExperienceReplayBuffer:
         batch_size = min(batch_size, self.size)
 
         # Determine sampling method
-        use_importance = (importance_weighted if importance_weighted is not None
-                         else self.sampling_strategy == "importance")
+        use_importance = (
+            importance_weighted
+            if importance_weighted is not None
+            else self.sampling_strategy == "importance"
+        )
 
         if use_importance:
             # Importance-weighted sampling
-            importances = np.array([exp.importance for exp in self.buffer[:self.size]])
+            importances = np.array([exp.importance for exp in self.buffer[: self.size]])
             probabilities = importances / importances.sum()
 
-            indices = np.random.choice(
-                self.size,
-                size=batch_size,
-                replace=False,
-                p=probabilities
-            )
+            indices = np.random.choice(self.size, size=batch_size, replace=False, p=probabilities)
         else:
             # Uniform sampling
-            indices = np.random.choice(
-                self.size,
-                size=batch_size,
-                replace=False
-            )
+            indices = np.random.choice(self.size, size=batch_size, replace=False)
 
-        self.stats['samples_drawn'] += batch_size
+        self.stats["samples_drawn"] += batch_size
 
         return [self.buffer[i] for i in indices]
 
-    def sample_by_domain(
-        self,
-        domain: str,
-        batch_size: int
-    ) -> List[Experience]:
+    def sample_by_domain(self, domain: str, batch_size: int) -> List[Experience]:
         """
         Sample experiences from a specific domain.
 
@@ -294,11 +277,7 @@ class ExperienceReplayBuffer:
         batch_size = min(batch_size, len(domain_experiences))
         return random.sample(domain_experiences, batch_size)
 
-    def update_importance(
-        self,
-        experience_idx: int,
-        new_importance: float
-    ):
+    def update_importance(self, experience_idx: int, new_importance: float):
         """
         Update importance of an experience.
 
@@ -331,26 +310,21 @@ class ExperienceReplayBuffer:
         self.seen_hashes.clear()
         self.size = 0
         self.total_seen = 0
-        self.stats = {
-            'added': 0,
-            'replaced': 0,
-            'duplicates': 0,
-            'samples_drawn': 0
-        }
+        self.stats = {"added": 0, "replaced": 0, "duplicates": 0, "samples_drawn": 0}
 
     def save(self, path: str):
         """Save buffer to disk."""
         state = {
-            'buffer': [exp.to_dict() for exp in self.buffer],
-            'size': self.size,
-            'total_seen': self.total_seen,
-            'seen_hashes': list(self.seen_hashes),
-            'stats': self.stats,
-            'config': {
-                'max_size': self.max_size,
-                'sampling_strategy': self.sampling_strategy,
-                'importance_decay': self.importance_decay
-            }
+            "buffer": [exp.to_dict() for exp in self.buffer],
+            "size": self.size,
+            "total_seen": self.total_seen,
+            "seen_hashes": list(self.seen_hashes),
+            "stats": self.stats,
+            "config": {
+                "max_size": self.max_size,
+                "sampling_strategy": self.sampling_strategy,
+                "importance_decay": self.importance_decay,
+            },
         }
         torch.save(state, path)
         print(f"Saved replay buffer to {path}")
@@ -359,17 +333,17 @@ class ExperienceReplayBuffer:
         """Load buffer from disk."""
         state = torch.load(path, map_location=self.device)
 
-        self.buffer = [Experience.from_dict(exp_dict) for exp_dict in state['buffer']]
-        self.size = state['size']
-        self.total_seen = state['total_seen']
-        self.seen_hashes = set(state['seen_hashes'])
-        self.stats = state['stats']
+        self.buffer = [Experience.from_dict(exp_dict) for exp_dict in state["buffer"]]
+        self.size = state["size"]
+        self.total_seen = state["total_seen"]
+        self.seen_hashes = set(state["seen_hashes"])
+        self.stats = state["stats"]
 
         # Update config
-        config = state['config']
-        self.max_size = config['max_size']
-        self.sampling_strategy = config['sampling_strategy']
-        self.importance_decay = config['importance_decay']
+        config = state["config"]
+        self.max_size = config["max_size"]
+        self.sampling_strategy = config["sampling_strategy"]
+        self.importance_decay = config["importance_decay"]
 
         print(f"Loaded replay buffer from {path} ({self.size} experiences)")
 
@@ -377,11 +351,11 @@ class ExperienceReplayBuffer:
         """Get buffer statistics."""
         return {
             **self.stats,
-            'current_size': self.size,
-            'max_size': self.max_size,
-            'total_seen': self.total_seen,
-            'fill_percentage': 100.0 * self.size / self.max_size,
-            'domain_distribution': self.get_domain_distribution()
+            "current_size": self.size,
+            "max_size": self.max_size,
+            "total_seen": self.total_seen,
+            "fill_percentage": 100.0 * self.size / self.max_size,
+            "domain_distribution": self.get_domain_distribution(),
         }
 
     def __len__(self) -> int:
@@ -414,21 +388,12 @@ class StreamingReplayBuffer(ExperienceReplayBuffer):
         **kwargs: Additional arguments for base buffer
     """
 
-    def __init__(
-        self,
-        max_size: int = 10000,
-        recent_window: int = 1000,
-        **kwargs
-    ):
+    def __init__(self, max_size: int = 10000, recent_window: int = 1000, **kwargs):
         super().__init__(max_size=max_size, **kwargs)
         self.recent_window = recent_window
         self.recent_experiences = deque(maxlen=recent_window)
 
-    def add_batch(
-        self,
-        batch: List[Experience],
-        auto_importance: bool = True
-    ) -> int:
+    def add_batch(self, batch: List[Experience], auto_importance: bool = True) -> int:
         """
         Add multiple experiences at once.
 
@@ -443,9 +408,9 @@ class StreamingReplayBuffer(ExperienceReplayBuffer):
 
         for exp in batch:
             # Auto-set importance from loss if available
-            if auto_importance and 'loss' in exp.metadata:
+            if auto_importance and "loss" in exp.metadata:
                 # Higher loss = more important (harder example)
-                loss = exp.metadata['loss']
+                loss = exp.metadata["loss"]
                 exp.importance = min(loss, 10.0)  # Cap at 10
 
             if self.add(exp):
@@ -462,11 +427,7 @@ class StreamingReplayBuffer(ExperienceReplayBuffer):
         batch_size = min(batch_size, len(self.recent_experiences))
         return random.sample(list(self.recent_experiences), batch_size)
 
-    def mixed_sample(
-        self,
-        batch_size: int,
-        recent_ratio: float = 0.3
-    ) -> List[Experience]:
+    def mixed_sample(self, batch_size: int, recent_ratio: float = 0.3) -> List[Experience]:
         """
         Sample mix of recent and historical experiences.
 
@@ -491,10 +452,7 @@ if __name__ == "__main__":
     print("Testing Experience Replay Buffer...")
 
     # Create buffer
-    buffer = ExperienceReplayBuffer(
-        max_size=100,
-        sampling_strategy="importance"
-    )
+    buffer = ExperienceReplayBuffer(max_size=100, sampling_strategy="importance")
 
     print(f"Buffer: {buffer}")
 
@@ -511,7 +469,7 @@ if __name__ == "__main__":
             labels=labels,
             importance=importance,
             domain=domain,
-            metadata={'step': i}
+            metadata={"step": i},
         )
 
         buffer.add(exp)
@@ -543,14 +501,12 @@ if __name__ == "__main__":
     print(f"Matches original: {len(new_buffer) == len(buffer)}")
 
     import os
+
     os.remove("test_buffer.pt")
 
     # Test streaming buffer
     print(f"\n\nTesting Streaming Buffer...")
-    streaming_buffer = StreamingReplayBuffer(
-        max_size=100,
-        recent_window=20
-    )
+    streaming_buffer = StreamingReplayBuffer(max_size=100, recent_window=20)
 
     # Add batch
     batch_experiences = []
@@ -558,9 +514,7 @@ if __name__ == "__main__":
         input_ids = torch.randint(0, 1000, (15,))
         labels = torch.randint(0, 1000, (15,))
         exp = Experience(
-            input_ids=input_ids,
-            labels=labels,
-            metadata={'loss': random.uniform(0.5, 3.0)}
+            input_ids=input_ids, labels=labels, metadata={"loss": random.uniform(0.5, 3.0)}
         )
         batch_experiences.append(exp)
 
