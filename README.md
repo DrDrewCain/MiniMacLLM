@@ -92,7 +92,7 @@ pip install -r requirements.txt
 
 ## Quick Start
 
-### Train Your First Model (30 minutes)
+### Train Your First Model (1-2 hours for quality results)
 
 ```bash
 # 1. Train tokenizer
@@ -101,18 +101,23 @@ python scripts/train_tokenizer.py \
   --vocab_size 8000 \
   --save data/tokenizers/my_tokenizer
 
-# 2. Pretrain base model
+# 2. Pretrain base model (recommended: 20-50 epochs for convergence)
 python scripts/pretrain.py \
   --config configs/medium.yaml \
   --data data/raw/wikitext2_train.txt \
   --tokenizer data/tokenizers/my_tokenizer \
-  --epochs 5 \
+  --epochs 30 \
   --batch_size 4 \
+  --val_split 0.1 \
+  --warmup_steps 500 \
+  --early_stopping_patience 5 \
   --save_dir checkpoints/base_model
+
+# Best checkpoint automatically saved at: checkpoints/base_model/best/checkpoint.pt
 
 # 3. Continual learning on your domain
 python scripts/continual_learn.py \
-  --model checkpoints/base_model/final/model.pt \
+  --model checkpoints/base_model/best/checkpoint.pt \
   --tokenizer data/tokenizers/my_tokenizer \
   --data your_domain_data.txt \
   --domain your_domain \
@@ -125,6 +130,20 @@ python scripts/generate.py \
   --prompt "Your prompt here" \
   --max_tokens 100
 ```
+
+### Enhanced Training Features
+
+The pretrain script now includes:
+- **Validation tracking**: Automatically validates after each epoch and tracks perplexity
+- **Best checkpoint saving**: Saves the model with lowest validation loss
+- **Learning rate scheduling**: Warmup + cosine decay for better convergence
+- **Early stopping**: Stops when validation loss plateaus (configurable patience)
+- **Perplexity monitoring**: Real-time tracking of model quality during training
+
+Target metrics for good base model:
+- Validation perplexity < 20 on WikiText-2
+- Training converged (validation loss plateau)
+- Coherent sentence generation
 
 ### Python API
 

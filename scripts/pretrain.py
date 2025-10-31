@@ -16,12 +16,14 @@ import torch.nn.functional as F
 from torch.utils.data import Dataset, DataLoader
 from tqdm import tqdm
 import time
+import math
 
 # Add src to path
 sys.path.append(str(Path(__file__).parent.parent))
 
 from src.model.llm import ContinualLLM, ModelConfig
 from src.tokenization.bpe_tokenizer import BPETokenizer
+from src.evaluation.metrics import compute_perplexity
 
 
 class TextDataset(Dataset):
@@ -85,7 +87,7 @@ def collate_fn(batch):
     }
 
 
-def train_epoch(model, dataloader, optimizer, device, epoch, grad_accumulation_steps=1):
+def train_epoch(model, dataloader, optimizer, device, epoch, grad_accumulation_steps=1, scheduler=None):
     """Train for one epoch."""
     model.train()
     total_loss = 0
@@ -121,6 +123,10 @@ def train_epoch(model, dataloader, optimizer, device, epoch, grad_accumulation_s
             torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
             optimizer.step()
             optimizer.zero_grad()
+            
+            # Step scheduler if provided
+            if scheduler is not None:
+                scheduler.step()
 
         total_loss += loss.item() * grad_accumulation_steps
         num_batches += 1
@@ -129,6 +135,42 @@ def train_epoch(model, dataloader, optimizer, device, epoch, grad_accumulation_s
         progress.set_postfix({'loss': total_loss / num_batches})
 
     return total_loss / num_batches
+
+
+def evaluate_model(model, dataloader, device, max_batches=None):
+    """Evaluate model on validation set."""
+    model.eval()
+    total_loss = 0
+    num_batches = 0
+
+    with torch.no_grad():
+        for batch_idx, batch in enumerate(dataloader):
+            if max_batches and batch_idx >= max_batches:
+                break
+                
+            input_ids = batch['input_ids'].to(device)
+            labels = batch['labels'].to(device)
+
+            # Forward pass
+            logits, _, _ = model(input_ids)
+
+            # Compute loss
+            shift_logits = logits[..., :-1, :].contiguous()
+            shift_labels = labels[..., 1:].contiguous()
+
+            loss = F.cross_entropy(
+                shift_logits.view(-1, shift_logits.size(-1)),
+                shift_labels.view(-1),
+                ignore_index=-1
+            )
+
+            total_loss += loss.item()
+            num_batches += 1
+
+    avg_loss = total_loss / num_batches if num_batches > 0 else float('inf')
+    perplexity = math.exp(avg_loss) if avg_loss < 100 else float('inf')  # Avoid overflow
+    
+    return avg_loss, perplexity
 
 
 def main():
@@ -148,6 +190,10 @@ def main():
     # Training
     parser.add_argument("--data", type=str, required=True,
                        help="Path to training data")
+    parser.add_argument("--val_data", type=str, default=None,
+                       help="Path to validation data (optional)")
+    parser.add_argument("--val_split", type=float, default=0.1,
+                       help="Validation split ratio if val_data not provided")
     parser.add_argument("--tokenizer", type=str, required=True,
                        help="Path to trained tokenizer")
     parser.add_argument("--batch_size", type=int, default=4)
@@ -155,6 +201,10 @@ def main():
     parser.add_argument("--learning_rate", type=float, default=3e-4)
     parser.add_argument("--epochs", type=int, default=3)
     parser.add_argument("--device", type=str, default="mps")
+    parser.add_argument("--warmup_steps", type=int, default=500,
+                       help="Warmup steps for learning rate scheduler")
+    parser.add_argument("--early_stopping_patience", type=int, default=3,
+                       help="Stop if validation loss doesn't improve for N epochs (0 to disable)")
 
     # Checkpointing
     parser.add_argument("--save_dir", type=str, default="checkpoints")
@@ -178,11 +228,14 @@ def main():
     print("="*60)
     print(f"Device: {device}")
     print(f"Data: {args.data}")
+    print(f"Validation: {args.val_data if args.val_data else f'{args.val_split*100:.0f}% split'}")
     print(f"Tokenizer: {args.tokenizer}")
     print(f"Batch size: {args.batch_size}")
     print(f"Gradient accumulation: {args.grad_accumulation}")
     print(f"Learning rate: {args.learning_rate}")
     print(f"Epochs: {args.epochs}")
+    print(f"Warmup steps: {args.warmup_steps}")
+    print(f"Early stopping patience: {args.early_stopping_patience if args.early_stopping_patience > 0 else 'Disabled'}")
     print("="*60 + "\n")
 
     # Load tokenizer
@@ -223,10 +276,42 @@ def main():
     num_params = model.get_num_params()
     print(f"Model created: {num_params:,} parameters\n")
 
-    # Create dataset and dataloader
-    dataset = TextDataset(args.data, tokenizer, max_length=args.max_seq_len)
-    dataloader = DataLoader(
-        dataset,
+    # Create datasets
+    print("Loading training data...")
+    train_dataset = TextDataset(args.data, tokenizer, max_length=args.max_seq_len)
+    
+    # Handle validation data
+    val_dataloader = None
+    if args.val_data:
+        print(f"Loading validation data from {args.val_data}...")
+        val_dataset = TextDataset(args.val_data, tokenizer, max_length=args.max_seq_len)
+        val_dataloader = DataLoader(
+            val_dataset,
+            batch_size=args.batch_size,
+            shuffle=False,
+            collate_fn=collate_fn
+        )
+    elif args.val_split > 0:
+        print(f"Splitting {args.val_split*100:.0f}% of training data for validation...")
+        # Split the dataset
+        train_size = int(len(train_dataset) * (1 - args.val_split))
+        val_size = len(train_dataset) - train_size
+        train_dataset, val_dataset = torch.utils.data.random_split(
+            train_dataset, 
+            [train_size, val_size],
+            generator=torch.Generator().manual_seed(42)
+        )
+        val_dataloader = DataLoader(
+            val_dataset,
+            batch_size=args.batch_size,
+            shuffle=False,
+            collate_fn=collate_fn
+        )
+        print(f"Training samples: {train_size}, Validation samples: {val_size}")
+    
+    # Create dataloader
+    train_dataloader = DataLoader(
+        train_dataset,
         batch_size=args.batch_size,
         shuffle=True,
         collate_fn=collate_fn
@@ -239,35 +324,108 @@ def main():
         betas=(0.9, 0.95),
         weight_decay=0.1
     )
+    
+    # Create learning rate scheduler with warmup and cosine decay
+    total_steps = len(train_dataloader) * args.epochs // args.grad_accumulation
+    
+    def lr_lambda(current_step):
+        if current_step < args.warmup_steps:
+            # Linear warmup
+            return float(current_step) / float(max(1, args.warmup_steps))
+        # Cosine decay
+        progress = float(current_step - args.warmup_steps) / float(max(1, total_steps - args.warmup_steps))
+        return max(0.1, 0.5 * (1.0 + math.cos(math.pi * progress)))
+    
+    scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda)
+    
+    print(f"Total training steps: {total_steps}")
+    print(f"Learning rate schedule: warmup {args.warmup_steps} steps, then cosine decay\n")
 
     # Training loop
     print("Starting training...\n")
     start_time = time.time()
+    
+    best_val_loss = float('inf')
+    best_epoch = 0
+    epochs_without_improvement = 0
 
     for epoch in range(1, args.epochs + 1):
+        # Train
         avg_loss = train_epoch(
-            model, dataloader, optimizer, device, epoch,
-            grad_accumulation_steps=args.grad_accumulation
+            model, train_dataloader, optimizer, device, epoch,
+            grad_accumulation_steps=args.grad_accumulation,
+            scheduler=scheduler
         )
+        
+        # Compute training perplexity
+        train_ppl = math.exp(avg_loss) if avg_loss < 100 else float('inf')
+        
+        # Validate
+        if val_dataloader is not None:
+            val_loss, val_ppl = evaluate_model(model, val_dataloader, device)
+            
+            print(f"Epoch {epoch}/{args.epochs}")
+            print(f"  Train Loss: {avg_loss:.4f} | Train PPL: {train_ppl:.2f}")
+            print(f"  Val Loss:   {val_loss:.4f} | Val PPL:   {val_ppl:.2f}")
+            
+            # Check for improvement
+            if val_loss < best_val_loss:
+                best_val_loss = val_loss
+                best_epoch = epoch
+                epochs_without_improvement = 0
+                
+                # Save best checkpoint
+                best_path = Path(args.save_dir) / "best"
+                best_path.mkdir(parents=True, exist_ok=True)
+                
+                torch.save({
+                    'epoch': epoch,
+                    'model_state_dict': model.state_dict(),
+                    'optimizer_state_dict': optimizer.state_dict(),
+                    'config': config.__dict__,
+                    'train_loss': avg_loss,
+                    'val_loss': val_loss,
+                    'val_perplexity': val_ppl
+                }, best_path / "checkpoint.pt")
+                
+                print(f"  ✓ New best checkpoint saved (val_loss: {val_loss:.4f}, val_ppl: {val_ppl:.2f})")
+            else:
+                epochs_without_improvement += 1
+                print(f"  No improvement for {epochs_without_improvement} epoch(s)")
+        else:
+            print(f"Epoch {epoch}/{args.epochs} - Train Loss: {avg_loss:.4f} | Train PPL: {train_ppl:.2f}")
 
-        print(f"Epoch {epoch}/{args.epochs} - Loss: {avg_loss:.4f}")
-
-        # Save checkpoint
+        # Save regular checkpoint
         save_path = Path(args.save_dir) / f"epoch_{epoch}"
         save_path.mkdir(parents=True, exist_ok=True)
 
-        torch.save({
+        checkpoint_data = {
             'epoch': epoch,
             'model_state_dict': model.state_dict(),
             'optimizer_state_dict': optimizer.state_dict(),
             'config': config.__dict__,
-            'loss': avg_loss
-        }, save_path / "checkpoint.pt")
+            'train_loss': avg_loss
+        }
+        
+        if val_dataloader is not None:
+            checkpoint_data['val_loss'] = val_loss
+            checkpoint_data['val_perplexity'] = val_ppl
 
-        print(f"Checkpoint saved to {save_path}\n")
+        torch.save(checkpoint_data, save_path / "checkpoint.pt")
+        print(f"  Checkpoint saved to {save_path}\n")
+        
+        # Early stopping check
+        if args.early_stopping_patience > 0 and epochs_without_improvement >= args.early_stopping_patience:
+            print(f"Early stopping triggered after {epoch} epochs")
+            print(f"Best validation loss: {best_val_loss:.4f} at epoch {best_epoch}")
+            break
 
     elapsed = time.time() - start_time
-    print(f"Training complete! Time: {elapsed/60:.2f} minutes")
+    print(f"\nTraining complete! Time: {elapsed/60:.2f} minutes")
+    
+    if val_dataloader is not None:
+        print(f"Best model: Epoch {best_epoch} with validation loss {best_val_loss:.4f}")
+        print(f"Best checkpoint available at: {args.save_dir}/best/checkpoint.pt")
 
     # Save final model
     final_path = Path(args.save_dir) / "final"
