@@ -413,3 +413,33 @@ class TestBPETokenizer:
 
         assert tokenizer.eos_token_id is not None
         assert tokenizer.eos_token_id == tokenizer.vocab["<|endoftext|>"]
+
+    def test_retrain_clears_state(self):
+        """Test that calling train() multiple times clears previous state."""
+        tokenizer = BPETokenizer(vocab_size=300)
+
+        # First training
+        tokenizer.train(["Hello world test"], verbose=False)
+        first_vocab_size = len(tokenizer.vocab)
+        first_merges = len(tokenizer.merges)
+        first_vocab_copy = tokenizer.vocab.copy()
+
+        # Second training on different data
+        tokenizer.train(["Python programming language"], verbose=False)
+        second_vocab_size = len(tokenizer.vocab)
+        second_merges = len(tokenizer.merges)
+
+        # Vocab size should be similar (both aiming for 300)
+        assert abs(first_vocab_size - second_vocab_size) < 10
+
+        # But the actual vocab should be different
+        assert tokenizer.vocab != first_vocab_copy
+
+        # Cache should be cleared
+        assert len(tokenizer.cache) == 0
+
+        # Should be able to encode new data without errors
+        text = "Python programming"
+        tokens = tokenizer.encode(text)
+        decoded = tokenizer.decode(tokens)
+        assert decoded == text

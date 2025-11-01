@@ -188,6 +188,13 @@ class BPETokenizer:
             texts: List of text strings to train on
             verbose: Whether to print progress
         """
+        # Reset all learned state to ensure clean training
+        self.vocab = {}
+        self.inverse_vocab = {}
+        self.merges = {}
+        self.merge_ranks = {}
+        self.cache.clear()
+
         if verbose:
             print(f"Training byte-level BPE tokenizer on {len(texts)} texts...")
             print(f"Target vocabulary size: {self.vocab_size}")
