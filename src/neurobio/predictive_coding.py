@@ -159,8 +159,6 @@ class PredictiveCodingLayer(nn.Module):
             Tuple of (converged_state, final_error)
             If return_trajectory: (states_trajectory, errors_trajectory)
         """
-        batch_size, seq_len, d_model = x_lower.shape
-
         # Initialize hidden state with bottom-up input
         x_current = x_lower.clone()
 

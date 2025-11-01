@@ -15,8 +15,6 @@ Key Principles:
 
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
-from typing import Optional
 from dataclasses import dataclass
 
 
@@ -269,7 +267,7 @@ if __name__ == "__main__":
             x = torch.randn(32, 196, 512)  # Normal
 
         # Apply homeostatic regulation
-        x_regulated = homeostatic(x, training=True)
+        _ = homeostatic(x, training=True)  # Result used for side effects (statistics tracking)
 
         if step % 20 == 19:
             stats = homeostatic.get_statistics()

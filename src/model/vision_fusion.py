@@ -346,9 +346,6 @@ def create_interleaved_sequence(
     Returns:
         Interleaved sequence
     """
-    batch_size = text_embeddings.shape[0]
-    device = text_embeddings.device
-
     # Split vision features per position
     num_positions = len(vision_positions)
     if num_positions == 0:

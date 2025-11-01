@@ -9,20 +9,15 @@ Tests the complete pipeline:
 
 import torch
 import pytest
-from pathlib import Path
 
 from src.model.llm import ContinualLLM, ModelConfig
 from src.model.vision_encoder import VisionEncoder, VisionEncoderConfig
 from src.model.vision_fusion import VisionTextFusion, VisionFusionConfig
 from src.model.multimodal_attention import (
-    MultimodalGroupedQueryAttention,
     MultimodalRoPE,
     MultimodalRoPEConfig
 )
-from src.tokenization.multimodal_tokenizer import (
-    MultimodalTokenizer,
-    MultimodalInput
-)
+from src.tokenization.multimodal_tokenizer import MultimodalTokenizer
 from src.continual.multimodal_trainer import (
     MultimodalContinualLearner,
     MultimodalContinualConfig

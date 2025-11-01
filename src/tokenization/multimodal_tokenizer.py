@@ -20,11 +20,11 @@ Design:
 """
 
 import torch
-from typing import List, Dict, Optional, Union, Tuple
+from typing import List, Dict, Optional, Union
 from dataclasses import dataclass
 import numpy as np
 
-from .bpe_tokenizer import BPETokenizer, BatchEncoding
+from .bpe_tokenizer import BPETokenizer
 
 
 @dataclass

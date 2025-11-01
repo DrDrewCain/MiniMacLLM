@@ -37,7 +37,6 @@ Example usage:
 
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 from typing import Optional, Dict, List
 from dataclasses import dataclass, field
 from pathlib import Path

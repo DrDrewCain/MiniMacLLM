@@ -20,7 +20,7 @@ Replaces random sampling with brain-like memory consolidation!
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from typing import List, Optional, Tuple
+from typing import Tuple
 from dataclasses import dataclass
 
 

@@ -26,17 +26,14 @@ from .experience_replay import Experience, StreamingReplayBuffer
 from .ewc import EWC, EWCConfig
 from ..lora.lora_model import LoRAModel
 from ..lora.lora_layer import LoRAConfig
-from ..lora.liquid_lora import LiquidLoRAConfig
 from ..neurobio.neuromodulation import (
     NeuromodulationController,
     NeuromodulatorConfig
 )
-from ..neurobio.homeostasis import HomeostaticNeuron, HomeostaticConfig
 from ..neurobio.autonomous_learning import (
     AutonomousLearningRateController,
     AutonomousLearningConfig
 )
-from ..neurobio.predictive_coding import compute_free_energy
 
 
 @dataclass

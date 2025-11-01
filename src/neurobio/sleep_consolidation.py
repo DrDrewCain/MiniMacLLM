@@ -18,7 +18,7 @@ This dramatically enhances EWC + Experience Replay!
 
 import torch
 import torch.nn as nn
-from typing import Optional, List
+from typing import Optional
 from dataclasses import dataclass
 
 
@@ -267,7 +267,7 @@ if __name__ == "__main__":
 
     # Perform consolidation
     print("\nRunning sleep consolidation...")
-    result = sleep.consolidate(verbose=True)
+    _ = sleep.consolidate(verbose=True)  # Result used for side effects (consolidation)
 
     # Show statistics
     stats = sleep.get_statistics()

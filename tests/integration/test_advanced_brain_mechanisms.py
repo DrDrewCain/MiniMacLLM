@@ -9,7 +9,6 @@ Tests the integration of:
 
 import pytest
 import torch
-import torch.nn as nn
 
 from src.neurobio.predictive_coding import (
     PredictiveCodingLayer,
@@ -203,7 +202,7 @@ class TestLiquidLoRAIntegration:
 
         # Check hidden state exists (may be small due to no_grad updates)
         # The important part is reset works
-        hidden_norm_before = layer.lora.hidden_B.norm().item()
+        _ = layer.lora.hidden_B.norm().item()  # Just check it exists
 
         # Reset for new domain
         layer.lora.reset_dynamics()
