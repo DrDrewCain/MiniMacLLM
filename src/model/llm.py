@@ -1,14 +1,31 @@
 """
 Complete Language Model implementation.
 
-Modern transformer-based LLM with:
+Modern transformer-based language model with:
 - Grouped Query Attention (GQA)
 - Rotary Position Embeddings (RoPE)
 - SwiGLU feed-forward
 - RMSNorm
 - Pre-normalization architecture
 
-This is the base model that will be used for continual learning.
+This is the base model that will be used for continual learning with
+brain-inspired mechanisms.
+
+Architecture References:
+- **GQA (Grouped Query Attention)**: Ainslie et al., 2023. "GQA: Training Generalized
+  Multi-Query Transformer Models from Multi-Head Checkpoints" arXiv:2305.13245
+- **RoPE (Rotary Position Embeddings)**: Su et al., 2021. "RoFormer: Enhanced
+  Transformer with Rotary Position Embedding" arXiv:2104.09864
+- **SwiGLU**: Shazeer, 2020. "GLU Variants Improve Transformer" arXiv:2002.05202
+- **RMSNorm**: Zhang & Sennrich, 2019. "Root Mean Square Layer Normalization"
+  NeurIPS 2019
+- **Pre-normalization**: Xiong et al., 2020. "On Layer Normalization in the
+  Transformer Architecture" ICML 2020
+- **Transformer Foundation**: Vaswani et al., 2017. "Attention Is All You Need"
+  NeurIPS 2017
+
+Implementation follows modern transformer best practices for
+efficient training and inference on consumer hardware.
 """
 
 import torch
@@ -96,10 +113,8 @@ class ContinualLLM(nn.Module):
     """
     Complete Language Model with continual learning support.
 
-    This is a modern decoder-only transformer architecture similar to:
-    - LLaMA 3 (Meta)
-    - Mistral (Mistral AI)
-    - GPT-NeoX (EleutherAI)
+    Modern decoder-only transformer architecture implementing current
+    best practices for efficient language modeling.
 
     Key features:
     - GQA for efficient inference
@@ -173,7 +188,7 @@ class ContinualLLM(nn.Module):
 
     def _init_weights(self, module):
         """
-        Initialize weights following LLaMA/GPT-NeoX conventions.
+        Initialize weights using standard scaled initialization.
 
         - Embeddings: N(0, 0.02)
         - Linear: N(0, 0.02)

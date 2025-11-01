@@ -136,7 +136,7 @@ zip -r ~/wikitext_medium_v1.0.0.zip checkpoints/wikitext_medium/final/model.pt
 ```markdown
 # MiniMacLLM v1.0.0
 
-First release of the continual learning LLM system!
+First release of the continual learning language model system!
 
 ## What's Included
 
@@ -153,7 +153,7 @@ First release of the continual learning LLM system!
 - **Training Loss**: 5.32
 - **Training Time**: 2.5 hours (M3 Max)
 - **Model Size**: 485 MB
-- **Architecture**: Modern LLM (GQA, RoPE, SwiGLU)
+- **Architecture**: Modern language model (GQA, RoPE, SwiGLU)
 
 ## Quick Start
 
@@ -301,7 +301,7 @@ python scripts/generate.py \
 ### 2. Create Announcement
 
 Post on:
-- Reddit: r/MachineLearning, r/LocalLLaMA
+- Reddit: r/MachineLearning, r/LocalModels
 - Twitter/X: Share your achievement
 - LinkedIn: Professional network
 - Hacker News: Show HN
@@ -309,7 +309,7 @@ Post on:
 Example post:
 
 ```
-🚀 MiniMacLLM: A 127M Continual Learning LLM
+🚀 MiniMacLLM: A 127M Continual Learning language model
 
 I built a language model that can learn new domains in real-time
 without forgetting what it already knows!

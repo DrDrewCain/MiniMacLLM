@@ -72,6 +72,12 @@ data/**/*
 !data/raw/sample.txt
 !data/raw/README.md
 
+# Data download scripts and guides (liability protection)
+scripts/download_*.py
+*DATA_GUIDE*.md
+*data_guide*.md
+docs/brain-inspired-integration-guide.md
+
 # Logs
 logs/
 *.log

@@ -9,7 +9,7 @@ This document outlines the requirements for building a state-of-the-art Large La
 
 ### 1.1 Attention Mechanisms ⭐ CRITICAL
 #### Current State-of-the-Art
-- **Grouped Query Attention (GQA)** - Industry standard (used in Llama 3, Mistral)
+- **Grouped Query Attention (GQA)** - Industry standard (used in Modern architectures)
   - Shares key/value matrices across attention heads
   - Reduces KV cache size significantly
   - Better efficiency than Multi-Head Attention (MHA)
@@ -34,7 +34,7 @@ This document outlines the requirements for building a state-of-the-art Large La
 ### 1.2 Positional Encodings ⭐ CRITICAL
 #### Current State-of-the-Art
 - **Rotary Position Embeddings (RoPE)** - Universal standard
-  - Used in all modern LLMs (Llama, GPT, Mistral)
+  - Universal in modern transformers
   - Better extrapolation to longer sequences
   - Encodes relative position information naturally
 
@@ -47,7 +47,7 @@ This document outlines the requirements for building a state-of-the-art Large La
 
 ### 1.3 Activation Functions ⭐ CRITICAL
 #### Current State-of-the-Art
-- **SwiGLU** - Preferred activation (Llama 3, PaLM)
+- **SwiGLU** - Preferred activation (Modern architectures)
   - Replaces GELU/ReLU in feed-forward networks
   - Better performance and training stability
 
@@ -64,7 +64,7 @@ This document outlines the requirements for building a state-of-the-art Large La
   - Used in all modern transformers
 
 - **RMSNorm** - Lightweight alternative to LayerNorm
-  - Used in Llama 3, T5
+  - Used in Modern models
   - Faster computation
 
 #### What We Need
@@ -78,7 +78,7 @@ This document outlines the requirements for building a state-of-the-art Large La
 #### Mixture of Experts (MoE)
 - Sparse activation of expert networks
 - 20x more cost-effective than dense models
-- Used in Mixtral 8x7B, DeepSeek-V3, Llama-4
+- Used in Modern MoE architectures
 
 #### What We Need
 ```python
@@ -95,8 +95,8 @@ This document outlines the requirements for building a state-of-the-art Large La
 ### 2.1 Modern Tokenization Standards
 #### Industry Standards
 - **Byte-Pair Encoding (BPE)** - Most widely used
-- **SentencePiece** - Google's implementation (Llama 2)
-- **tiktoken** - OpenAI's implementation (GPT-4, Llama 3)
+- **Subword tokenizers - Modern implementations
+- **efficient tokenizers - Modern implementations)
 
 #### Key Features Needed
 ```python
@@ -405,7 +405,7 @@ xformers  # Memory-efficient attention
 #### Scale
 - Minimum: 50B-100B tokens
 - Competitive: 1T-2T tokens
-- State-of-the-art: 10T-15T tokens (Llama 3 used 15T)
+- State-of-the-art: 10T-15T tokens (Modern models use 10-15T)
 
 #### Sources
 - Web crawl (filtered)
@@ -548,7 +548,7 @@ xformers  # Memory-efficient attention
 7. **FlashAttention is critical** - For training efficiency
 8. **Evaluation is multi-faceted** - Need diverse benchmarks
 9. **Reasoning models are emerging** - Chain-of-thought training
-10. **Open-source is competitive** - Llama 3, Mixtral rival GPT-3.5
+10. **Open-source is competitive** - Open-source models rival proprietary ones
 
 ---
 

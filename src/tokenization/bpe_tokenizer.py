@@ -1,10 +1,10 @@
 """
 Byte-Level BPE Tokenizer.
 
-Modern byte-level BPE with improvements from:
-- Qwen2.5: Advanced byte-level encoding, robust Unicode handling
-- GPT-2: Byte-to-unicode mapping for printable characters
-- tiktoken: Efficient regex patterns and caching
+Modern byte-level BPE implementing published tokenization techniques:
+- Byte-level encoding for robust Unicode handling
+- Byte-to-unicode mapping for printable characters
+- Efficient regex patterns and caching
 
 Key improvements over naive BPE:
 1. Byte-level encoding - handles ANY Unicode without unknown tokens
@@ -13,10 +13,13 @@ Key improvements over naive BPE:
 4. Optimized regex - better pre-tokenization
 5. Proper special token handling
 
-References:
-    - Qwen2.5 Technical Report (2024): https://arxiv.org/abs/2412.15115
-    - GPT-2: "Language Models are Unsupervised Multitask Learners" (Radford et al., 2019)
-    - tiktoken: https://github.com/openai/tiktoken
+Technical References:
+    - Sennrich et al., 2016. "Neural Machine Translation of Rare Words with
+      Subword Units" ACL 2016 (BPE foundation)
+    - Radford et al., 2019. "Language Models are Unsupervised Multitask Learners"
+      (Byte-level BPE approach)
+    - Wang et al., 2024. "Qwen2.5 Technical Report" arXiv:2412.15115
+      (Advanced byte-level encoding techniques)
 """
 
 import json
@@ -76,7 +79,7 @@ class BatchEncoding:
 @lru_cache()
 def bytes_to_unicode():
     """
-    Create bijective mapping from bytes to Unicode strings (GPT-2/Qwen2.5 approach).
+    Create bijective mapping from bytes to Unicode strings (byte-level encoding approach).
 
     Returns a dictionary mapping all 256 byte values to printable Unicode characters.
     Avoids mapping to whitespace/control characters by using higher Unicode codepoints.
@@ -120,7 +123,7 @@ class BPETokenizer:
     - Byte-level encoding: No unknown tokens, handles all Unicode
     - NFC normalization: Consistent representation
     - Efficient caching: LRU cache + token cache
-    - Qwen2.5 regex: Better pre-tokenization patterns
+    - Advanced regex: Better pre-tokenization patterns
     - Special token support: Proper handling of control tokens
 
     Args:
@@ -147,9 +150,9 @@ class BPETokenizer:
         self.min_frequency = min_frequency
         self.normalization = normalization
 
-        # Special tokens (Qwen2.5 style - minimal by default)
+        # Special tokens (minimal by default)
         if special_tokens is None:
-            special_tokens = ["<|endoftext|>"]  # GPT-2/Qwen style
+            special_tokens = ["<|endoftext|>"]  # Standard end-of-text marker
         self.special_tokens = special_tokens
 
         # Byte encoder/decoder for byte-level BPE
@@ -162,7 +165,7 @@ class BPETokenizer:
         self.merges: Dict[Tuple[str, str], str] = {}
         self.merge_ranks: Dict[Tuple[str, str], int] = {}
 
-        # Qwen2.5-style regex pattern for pre-tokenization
+        # Advanced regex pattern for pre-tokenization
         # Handles: contractions, words, numbers, punctuation, whitespace
         self.pattern = re.compile(
             r"""(?i:'s|'t|'re|'ve|'m|'ll|'d)|[^\r\n\p{L}\p{N}]?\p{L}+|\p{N}| ?[^\s\p{L}\p{N}]+[\r\n]*|\s*[\r\n]+|\s+(?!\S)|\s+"""
@@ -204,7 +207,7 @@ class BPETokenizer:
         for text in texts:
             # Normalize text first
             normalized = self._normalize_text(text)
-            # Pre-tokenize using Qwen2.5-style regex
+            # Pre-tokenize using advanced regex pattern
             words = self.pattern.findall(normalized)
 
             for word in words:
@@ -387,7 +390,7 @@ class BPETokenizer:
 
         Args:
             text: Text to encode
-            add_special_tokens: Whether to add endoftext token (Qwen2.5 style)
+            add_special_tokens: Whether to add endoftext token
 
         Returns:
             List of token IDs
@@ -395,7 +398,7 @@ class BPETokenizer:
         # Normalize text
         normalized = self._normalize_text(text)
 
-        # Pre-tokenize using Qwen2.5-style regex
+        # Pre-tokenize using advanced regex pattern
         words = self.pattern.findall(normalized)
 
         # Tokenize each word
@@ -406,7 +409,7 @@ class BPETokenizer:
             tokens.extend(word_token_ids)
 
         if add_special_tokens and self.special_tokens:
-            # Add endoftext token at the end (Qwen2.5/GPT-2 style)
+            # Add endoftext token at the end
             tokens.append(self.vocab[self.special_tokens[0]])
 
         return list(tokens)

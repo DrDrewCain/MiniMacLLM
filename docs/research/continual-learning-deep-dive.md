@@ -111,7 +111,7 @@ max_seq_len: 2048     # Start with shorter context
 **Training Strategy:**
 ```
 1. Pretrain on general corpus (one-time)
-2. [Optional] Distill from large LLM (GPT-4, Claude)
+2. [Optional] Distill from teacher models
 3. Deploy as frozen base
 4. All adaptation via LoRA
 ```
@@ -542,7 +542,7 @@ class MPSOptimizedTrainer(ContinualLearner):
 
 ## Knowledge Distillation from Large LLMs
 
-**Goal:** Transfer knowledge from GPT-4/Claude/Llama-70B into our small model
+**Goal:** Transfer knowledge from large teacher models into our small model
 
 ```python
 class KnowledgeDistillation:
@@ -551,7 +551,7 @@ class KnowledgeDistillation:
     """
     def __init__(self, student_model, teacher_api):
         self.student = student_model
-        self.teacher = teacher_api  # API to GPT-4, Claude, etc.
+        self.teacher = teacher_api  # API to teacher model
 
     def generate_training_data(self, prompts, num_samples=1000):
         """
@@ -749,7 +749,7 @@ Custom_ML_Agent/
 
 ### Phase 6: Knowledge Distillation (Week 5)
 **Status:** QUALITY BOOST
-1. 🔄 Distillation from GPT-4/Claude API
+1. 🔄 Distillation from teacher model API
 2. 🔄 Synthetic data generation
 3. 🔄 Quality filtering
 
@@ -779,7 +779,7 @@ Target: Full system < 8GB RAM on M1 Mac
 
 ### 4. Specialization Quality
 ```
-Target: Match GPT-3.5 quality on specialized domain after seeing 10K examples
+Target: Match capable model quality on specialized domain after seeing 10K examples
 ```
 
 ### 5. Adapter Efficiency

@@ -1,6 +1,6 @@
 # Continual Learning Demonstration Guide
 
-This guide shows how to test the continual learning capabilities of your LLM system.
+This guide shows how to test the continual learning capabilities of your language model system.
 
 ---
 
@@ -436,7 +436,7 @@ learner.set_adapter(None)             # Back to base model
 4. **Multi-Domain Mastery**: Single model excels at multiple specialized tasks
 5. **Practical Deployment**: Tiny adapters (~11MB) easy to distribute and swap
 
-This is the **future of continual learning** for LLMs! 🚀
+This is the **future of continual learning** for language models! 🚀
 
 ---
 

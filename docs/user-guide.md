@@ -1,6 +1,6 @@
 # User Guide
 
-Complete guide to training, continual learning, and using your LLM.
+Complete guide to training, continual learning, and using your language model.
 
 ## Table of Contents
 1. [Training a Tokenizer](#training-a-tokenizer)

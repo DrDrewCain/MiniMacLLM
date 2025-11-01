@@ -1,5 +1,5 @@
 """
-Evaluation module for continual learning LLM.
+Evaluation module for continual learning language model.
 
 This module provides tools for:
 - Computing perplexity and cross-entropy loss

@@ -11,7 +11,7 @@
 
 | Component | Status | Tests |
 |-----------|--------|-------|
-| Core LLM Architecture | 100% | 104/104 |
+| Core Language Model Architecture | 100% | 104/104 |
 | Continual Learning | 100% | 18/18 |
 | Tokenization | 100% | Included |
 | Training Pipeline | 100% | Verified |

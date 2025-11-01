@@ -2,11 +2,17 @@
 Attention mechanisms for transformer models.
 
 Implements:
-1. Grouped Query Attention (GQA) - Used in LLaMA 3, Mistral, Granite
+1. Grouped Query Attention (GQA) - Memory-efficient attention with shared KV heads
 2. Multi-Head Attention (MHA) - Traditional approach (for comparison)
 3. Multi-Query Attention (MQA) - Extreme efficiency variant
 
-GQA is the state-of-the-art as of 2024-2025.
+GQA provides the best balance of quality and efficiency for modern transformers.
+
+References:
+- Ainslie et al., 2023. "GQA: Training Generalized Multi-Query Transformer Models
+  from Multi-Head Checkpoints" arXiv:2305.13245
+- Shazeer, 2019. "Fast Transformer Decoding: One Write-Head is All You Need"
+  arXiv:1911.02150 (Multi-Query Attention)
 """
 
 import torch
@@ -72,8 +78,9 @@ class GroupedQueryAttention(nn.Module):
         bias: Whether to use bias in linear projections
 
     References:
-        - "GQA: Training Generalized Multi-Query Transformer Models from Multi-Head Checkpoints" (Ainslie et al., 2023)
-        - Used in: LLaMA 3, Mistral 7B, IBM Granite
+        - Ainslie et al., 2023. "GQA: Training Generalized Multi-Query Transformer Models
+          from Multi-Head Checkpoints" arXiv:2305.13245
+        - Reduces KV cache memory by 4-8x with minimal quality loss
     """
 
     def __init__(
