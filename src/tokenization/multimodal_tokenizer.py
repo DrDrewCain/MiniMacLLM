@@ -322,13 +322,12 @@ class MultimodalTokenizer(BPETokenizer):
         ]
 
         # Get max length for padding
+        target_length = 0
         if padding:
             if max_length:
                 target_length = max_length
             else:
                 target_length = max(len(enc.input_ids) for enc in encodings)
-        else:
-            target_length = 0
 
         # Prepare batched outputs
         batch_input_ids = []
