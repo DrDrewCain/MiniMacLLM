@@ -2,33 +2,85 @@
 
 ## Overview
 
-Continual LLM is a modern transformer-based language model with continual learning capabilities. The system combines state-of-the-art 2024-2025 LLM architecture with novel anti-forgetting techniques.
+MiniMacLLM is a brain-inspired continual learning language model that combines modern transformer architecture with neurobiologically-realistic learning mechanisms. Unlike traditional AI, the system decides its own learning dynamics from mathematical principles—no human presets.
 
 ## System Architecture
 
 ```text
-┌─────────────────────────────────────────────────┐
-│           Continual LLM System                  │
-├─────────────────────────────────────────────────┤
-│                                                 │
-│  ┌──────────────┐      ┌──────────────────┐   │
-│  │ Base Model   │◄─────┤ LoRA Adapters    │   │
-│  │ (Frozen)     │      │ (Trainable)      │   │
-│  │ 127M params  │      │ ~3M params each  │   │
-│  └──────────────┘      └──────────────────┘   │
-│         │                                       │
-│         ▼                                       │
-│  ┌──────────────────────────────────────────┐  │
-│  │   Anti-Forgetting System                 │  │
-│  │  • Experience Replay Buffer              │  │
-│  │  • Elastic Weight Consolidation (EWC)    │  │
-│  └──────────────────────────────────────────┘  │
-│                                                 │
-└─────────────────────────────────────────────────┘
-```text
+┌─────────────────────────────────────────────────────────┐
+│              MiniMacLLM Brain System                    │
+├─────────────────────────────────────────────────────────┤
+│                                                         │
+│  ┌────────────────────────────────────────────────┐    │
+│  │        Neurobiological Learning Control        │    │
+│  │  • Autonomous Learning Rate (emergent)         │    │
+│  │  • Neuromodulation (dopamine/serotonin/ACh)    │    │
+│  │  • Homeostatic Plasticity (stability)          │    │
+│  └────────────────┬───────────────────────────────┘    │
+│                   │                                     │
+│                   ▼                                     │
+│  ┌──────────────┐      ┌──────────────────┐           │
+│  │ Base Model   │◄─────┤ LoRA Adapters    │           │
+│  │ (Frozen)     │      │ (Trainable)      │           │
+│  │ 127M params  │      │ ~3M params each  │           │
+│  └──────┬───────┘      └──────────────────┘           │
+│         │                                               │
+│         ▼                                               │
+│  ┌─────────────────────────────────────────────────┐  │
+│  │         Memory & Consolidation System           │  │
+│  │  • Hippocampal Memory (pattern sep/completion)  │  │
+│  │  • Experience Replay (intelligent rehearsal)    │  │
+│  │  • Sleep Consolidation (offline strengthening)  │  │
+│  │  • EWC (elastic weight protection)              │  │
+│  └─────────────────────────────────────────────────┘  │
+│                                                         │
+└─────────────────────────────────────────────────────────┘
+```
 ## Core Components
 
-### 1. Modern Transformer Architecture
+### 1. Brain-Inspired Learning Mechanisms
+
+**Autonomous Learning Rate Controller** (`src/neurobio/autonomous_learning.py`):
+- **No human presets** - Learning rate emerges from 5 mathematical factors:
+  1. Prediction error (urgency)
+  2. Gradient statistics (natural step size)
+  3. Uncertainty (exploration vs exploitation)
+  4. Success history (meta-learning)
+  5. Metabolic cost (resource constraints)
+- System decides its own learning speed, just like biological brains
+
+**Neuromodulation System** (`src/neurobio/neuromodulation.py`):
+- **Dopamine** - Modulates learning rate based on reward prediction error
+- **Serotonin** - Balances stability vs plasticity
+- **Acetylcholine** - Gates attention and memory formation
+- **Noradrenaline** - Controls arousal and alertness
+- Learnable parameters that adapt to task dynamics
+
+**Hippocampal Memory** (`src/neurobio/hippocampal_memory.py`):
+- **Pattern Separation** - 2% sparse encoding in dentate gyrus
+- **Pattern Completion** - Content-based retrieval from CA3
+- **Episodic Memory** - Stores important experiences for replay
+- Replaces random sampling with intelligent memory selection
+
+**Sleep Consolidation** (`src/neurobio/sleep_consolidation.py`):
+- **Offline Replay** - Rehearse stored memories without new data
+- **Hebbian Strengthening** - "Neurons that fire together, wire together"
+- **Synaptic Pruning** - Remove weak connections
+- **Noisy Dreams** - Add noise during replay for robustness
+
+**Homeostatic Plasticity** (`src/neurobio/homeostasis.py`):
+- **Synaptic Scaling** - Maintains stable neural activity
+- **Adaptive Thresholds** - Prevents dead neurons
+- **Target Firing Rate** - Self-regulating activation levels
+- Nature 2024 finding: Critical for preventing forgetting
+
+**Dendritic Computation** (`src/neurobio/dendritic.py`):
+- **Compartmentalized Processing** - Multiple computational units per neuron
+- **Context-Dependent Gating** - NMDA-like receptor modulation
+- **Network-in-a-Neuron** - Efficient parameter usage
+- Enables complex nonlinear computations
+
+### 2. Modern Transformer Architecture
 
 **Key Features:**
 - **Grouped Query Attention (GQA)**: 4x KV cache reduction
@@ -78,6 +130,14 @@ Continual LLM is a modern transformer-based language model with continual learni
 
 ```
 src/
+├── neurobio/               # Brain-inspired mechanisms ⭐ NEW
+│   ├── autonomous_learning.py    # Emergent learning rate
+│   ├── neuromodulation.py        # Dopamine/serotonin/ACh
+│   ├── homeostasis.py            # Synaptic scaling
+│   ├── dendritic.py              # Compartmentalized computation
+│   ├── hippocampal_memory.py     # Pattern separation/completion
+│   └── sleep_consolidation.py    # Offline strengthening
+│
 ├── model/                  # Core LLM
 │   ├── llm.py             # Main model
 │   ├── attention.py       # GQA implementation
@@ -86,6 +146,12 @@ src/
 │   ├── normalization.py   # RMSNorm
 │   └── transformer_block.py
 │
+├── multimodal/             # Vision-language ⭐ NEW
+│   ├── vision_encoder.py          # Image processing
+│   ├── multimodal_tokenizer.py    # Unified tokenization
+│   ├── fusion_layers.py           # Cross-modal attention
+│   └── multimodal_llm.py          # Main multimodal model
+│
 ├── lora/                   # Parameter-efficient fine-tuning
 │   ├── lora_layer.py      # LoRA layers
 │   └── lora_model.py      # Model wrapper
@@ -93,9 +159,9 @@ src/
 ├── continual/              # Anti-forgetting
 │   ├── experience_replay.py
 │   ├── ewc.py
-│   └── continual_trainer.py  # Main interface
+│   └── continual_trainer.py  # Main interface (with brain mechanisms)
 │
-├── tokenization/           # BPE tokenizer
+├── tokenization/           # Byte-level BPE tokenizer
 │   ├── bpe_tokenizer.py
 │   └── vocab_trainer.py
 │
@@ -103,7 +169,7 @@ src/
 ├── evaluation/             # Metrics
 ├── data/                   # Data loading
 └── utils/                  # Helpers
-```text
+```
 ## Data Flow
 
 ### Training Flow
@@ -116,7 +182,8 @@ Raw Text → Tokenizer → Token IDs → Model → Logits → Loss
                               │                │
                          LoRA Weights    Base Weights
                          (trainable)      (frozen)
-```text
+```
+
 ### Continual Learning Flow
 
 ```

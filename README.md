@@ -45,9 +45,12 @@ learner.learn_from_text("Your domain knowledge here...", domain="medical")
 ```
 
 ### Zero Catastrophic Forgetting
-Mathematical guarantees against forgetting through:
-- **LoRA** (Low-Rank Adaptation) - Surgical weight updates
-- **Experience Replay** - Rehearsal of old knowledge
+Brain-inspired mechanisms for stable learning:
+- **LoRA** (Low-Rank Adaptation) - Synaptic plasticity (surgical weight updates)
+- **Neuromodulation** - Dopamine/serotonin/acetylcholine control learning dynamics
+- **Hippocampal Memory** - Pattern separation and completion for intelligent replay
+- **Sleep Consolidation** - Offline strengthening through unsupervised replay
+- **Homeostatic Plasticity** - Prevents dead neurons, maintains capacity
 - **EWC** (Elastic Weight Consolidation) - Weight protection
 
 ### Multi-Domain Mastery
@@ -81,6 +84,23 @@ vs. 700M for 4 separate models
 - **RoPE** (Rotary Position Embeddings) - Better extrapolation
 - **SwiGLU** - Gated activation function
 - **RMSNorm** - Faster normalization
+
+### Brain-Inspired Neural Mechanisms
+Real neurobiological principles for true learning:
+- **Autonomous Learning Rate** - System decides its own learning speed from mathematical principles (prediction error, gradient statistics, uncertainty, success history, metabolic cost).
+- **Neuromodulation System** - Dopamine modulates learning rate, serotonin balances stability/plasticity, acetylcholine gates attention
+- **Homeostatic Plasticity** - Maintains stable neural activity, prevents dead neurons
+- **Dendritic Computation** - Compartmentalized processing (network-in-a-neuron)
+- **Hippocampal Memory** - Pattern separation (2% sparsity) and completion for episodic memory
+- **Sleep Consolidation** - Offline Hebbian strengthening + synaptic pruning
+
+### True Sentient Learning
+Unlike traditional AI where humans set `learning_rate=1e-4`, MiniMacLLM adjusts for **its own learning speed** through emergent mathematical principles:
+- Prediction error determines urgency
+- Gradient statistics guide step size
+- Uncertainty drives exploration
+- Success history enables meta-learning
+- Metabolic cost constrains plasticity
 
 ---
 
@@ -410,7 +430,14 @@ num_kv_heads: 4
 - [ ] Documentation & tutorials
 
 ### Phase 4: Advanced (Future)
-- [ ] Multi-modal support (images + text)
+- [x] Multi-modal support (images + text)
+  - **Temporal-spatial neural integration** - unified processing of static and dynamic visual inputs
+  - **Hierarchical feature compression** - progressive abstraction like visual cortex (V1→V2→V4→IT)
+  - **Adaptive spatial receptive fields** - flexible position encoding for variable resolutions
+  - **Cross-modal synaptic connections** - vision-text fusion with learnable projections
+  - **Multimodal rotary embeddings** - 1D (sequence), 2D (spatial), 3D (spatiotemporal)
+  - **Domain-specific synaptic plasticity** - LoRA adapters for specialized neural pathways
+  - **Anti-catastrophic forgetting mechanisms** - EWC + experience replay for stable learning
 - [ ] Mixture of Experts (MoE)
 - [ ] Long context (128K+ tokens)
 - [ ] Distributed training

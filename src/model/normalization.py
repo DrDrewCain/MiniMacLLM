@@ -1,12 +1,15 @@
 """
 Normalization layers for transformer models.
 
-Implements RMSNorm (Root Mean Square Layer Normalization) as used in:
-- LLaMA 3 (Meta)
-- T5 (Google)
-- Mistral
+Implements RMSNorm (Root Mean Square Layer Normalization), which is
+simpler and faster than LayerNorm while maintaining similar performance.
 
-RMSNorm is simpler and faster than LayerNorm while maintaining similar performance.
+RMSNorm removes the mean-centering step from LayerNorm, reducing
+computational cost with negligible impact on model quality.
+
+References:
+- Zhang & Sennrich, 2019. "Root Mean Square Layer Normalization"
+  NeurIPS 2019
 """
 
 import torch
@@ -27,8 +30,9 @@ class RMSNorm(nn.Module):
         eps: Small constant for numerical stability (default: 1e-6)
 
     References:
-        - "Root Mean Square Layer Normalization" (Zhang & Sennrich, 2019)
-        - Used in LLaMA, T5, and other modern LLMs
+        - Zhang & Sennrich, 2019. "Root Mean Square Layer Normalization"
+          NeurIPS 2019
+        - Provides ~10-15% speedup over LayerNorm with comparable accuracy
     """
 
     def __init__(self, dim: int, eps: float = 1e-6):

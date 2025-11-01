@@ -8,7 +8,12 @@ Implements modern transformer decoder block with:
 - RMSNorm
 - Residual connections
 
-This is the architecture used in LLaMA 3, Mistral, and other SOTA models.
+This architecture follows current best practices for efficient
+transformer-based language modeling.
+
+References:
+- Xiong et al., 2020. "On Layer Normalization in the Transformer Architecture" ICML 2020
+- Vaswani et al., 2017. "Attention Is All You Need" NeurIPS 2017
 """
 
 import torch
@@ -46,8 +51,8 @@ class TransformerBlock(nn.Module):
         bias: Whether to use bias in linear layers
 
     References:
-        - "On Layer Normalization in the Transformer Architecture" (Xiong et al., 2020)
-        - Pre-norm is used in all modern LLMs (LLaMA, GPT-3, etc.)
+        - Xiong et al., 2020. "On Layer Normalization in the Transformer Architecture" ICML 2020
+        - Pre-normalization enables stable training of deep transformers
     """
 
     def __init__(
@@ -151,7 +156,7 @@ class ParallelTransformerBlock(nn.Module):
     Architecture:
         x = x + Attention(Norm(x)) + FeedForward(Norm(x))
 
-    Used in some experimental models like GPT-J.
+    This can improve throughput but may affect model quality.
 
     Args:
         Same as TransformerBlock

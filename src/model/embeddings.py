@@ -2,8 +2,15 @@
 Position embedding layers for transformer models.
 
 Implements:
-1. Rotary Position Embeddings (RoPE) - Used in LLaMA, GPT-NeoX, Mistral
+1. Rotary Position Embeddings (RoPE) - Rotation-based position encoding
 2. Learned Absolute Position Embeddings - Traditional approach
+
+RoPE provides superior extrapolation to longer sequences compared to
+absolute positional embeddings.
+
+References:
+- Su et al., 2021. "RoFormer: Enhanced Transformer with Rotary Position
+  Embedding" arXiv:2104.09864
 """
 
 import torch
@@ -28,8 +35,9 @@ class RotaryPositionEmbedding(nn.Module):
         device: Device to place tensors on
 
     References:
-        - "RoFormer: Enhanced Transformer with Rotary Position Embedding" (Su et al., 2021)
-        - Used in: LLaMA 3, Mistral, GPT-NeoX, PaLM
+        - Su et al., 2021. "RoFormer: Enhanced Transformer with Rotary Position
+          Embedding" arXiv:2104.09864
+        - Enables better length extrapolation than absolute position embeddings
     """
 
     def __init__(
@@ -121,7 +129,7 @@ def apply_rotary_pos_emb(
         Rotated (q, k) tensors with same shapes as input
 
     References:
-        - Original implementation from LLaMA
+        - Standard implementation following Su et al., 2021
         - Conceptually: treating consecutive pairs as complex numbers
     """
     # Reshape cos/sin to match q/k shape

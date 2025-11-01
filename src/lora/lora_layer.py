@@ -13,8 +13,9 @@ Forward pass: h = W₀x + BAx
 where W₀ is frozen, only B and A are trainable.
 
 References:
-    - "LoRA: Low-Rank Adaptation of Large Language Models" (Hu et al., 2021)
-    - Used for efficient fine-tuning of LLMs
+    - Hu et al., 2021. "LoRA: Low-Rank Adaptation of Large Language Models"
+      arXiv:2106.09685
+    - Enables efficient fine-tuning with minimal trainable parameters
 """
 
 import torch
