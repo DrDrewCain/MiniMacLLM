@@ -216,14 +216,21 @@ class MultimodalContinualLearner(ContinualLearner):
         vision_only: bool = False
     ):
         """
-        Add a new domain-specific LoRA adapter.
+        Register a new domain for tracking purposes.
 
-        Note: Current LoRA implementation uses single adapter.
-        This method is a placeholder for future multi-adapter support.
+        Currently tracks domain names for future multi-adapter support.
+        When multi-adapter support is implemented, this will create
+        separate LoRA adapters for each domain to prevent catastrophic
+        forgetting when learning from multiple vision domains.
+
+        Current behavior:
+        - Registers domain name in vision_domains set
+        - Enables domain-aware checkpointing and logging
+        - Does NOT create separate adapter weights yet
 
         Args:
-            domain_name: Name of the domain
-            vision_only: If True, only add vision adapter
+            domain_name: Name of the domain (e.g., "medical", "satellite")
+            vision_only: Reserved for future use (will create vision-only adapter)
         """
         # Store domain name for tracking
         self.vision_domains.add(domain_name)
@@ -234,13 +241,19 @@ class MultimodalContinualLearner(ContinualLearner):
 
     def set_active_domain(self, domain_name: str):
         """
-        Switch to a specific domain adapter.
+        Set the active domain for tracking and logging.
 
-        Note: Current LoRA implementation uses single adapter.
-        This method is a placeholder for future multi-adapter support.
+        Currently updates the active domain label for logging and
+        checkpointing. When multi-adapter support is implemented,
+        this will switch between different LoRA adapter weights.
+
+        Current behavior:
+        - Updates active_vision_domain attribute
+        - Affects domain labels in logs and checkpoints
+        - Does NOT switch adapter weights yet
 
         Args:
-            domain_name: Domain to activate
+            domain_name: Domain to activate (must be registered first)
         """
         self.active_vision_domain = domain_name
         print(

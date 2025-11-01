@@ -134,11 +134,28 @@ class MultimodalRoPE(nn.Module):
         """Precompute 3D RoPE frequencies for videos."""
         # Split head_dim into time, height, width
         # Each dimension gets half for real/complex (will be doubled)
-        # Ensure dimensions sum to head_dim
+        # Validate head_dim is even and large enough for 3D split
+        if self.head_dim < 6:
+            raise ValueError(f"head_dim ({self.head_dim}) must be at least 6 for 3D RoPE")
+        if self.head_dim % 2 != 0:
+            raise ValueError(f"head_dim ({self.head_dim}) must be even for RoPE")
+
+        # Calculate initial dimension split
         dim_t_half = max(1, self.head_dim // 6)
         dim_h_half = max(1, self.head_dim // 6)
         # Remaining dims go to width
         dim_w_half = max(1, (self.head_dim // 2) - dim_t_half - dim_h_half)
+
+        # Validate the split before any buffer registration
+        total_half = dim_t_half + dim_h_half + dim_w_half
+        if total_half * 2 != self.head_dim:
+            # Adjust width to make dimensions sum correctly
+            dim_w_half = (self.head_dim // 2) - dim_t_half - dim_h_half
+            if dim_w_half <= 0:
+                raise ValueError(
+                    f"head_dim ({self.head_dim}) too small for 3D RoPE split "
+                    f"with dim_t={dim_t_half*2}, dim_h={dim_h_half*2}"
+                )
 
         # Time frequencies
         inv_freq_t = 1.0 / (
@@ -186,31 +203,10 @@ class MultimodalRoPE(nn.Module):
         self.register_buffer("cos_3d_w", emb_w.cos(), persistent=False)
         self.register_buffer("sin_3d_w", emb_w.sin(), persistent=False)
 
+        # Store final dimensions (validation already done above)
         self.dim_t = dim_t_half * 2
         self.dim_h_3d = dim_h_half * 2
         self.dim_w_3d = dim_w_half * 2
-
-        # Validate that dimensions sum to head_dim
-        total = self.dim_t + self.dim_h_3d + self.dim_w_3d
-        if total != self.head_dim:
-            # Adjust width dimension to match
-            extra = self.head_dim - total
-            self.dim_w_3d += extra
-            if self.dim_w_3d <= 0 or self.dim_w_3d % 2 != 0:
-                raise ValueError(f"head_dim ({self.head_dim}) must allow an even 3D RoPE split")
-            # Recompute width frequencies with corrected dimension
-            dim_w_half = self.dim_w_3d // 2
-            inv_freq_w = 1.0 / (
-                self.base ** (
-                    torch.arange(0, dim_w_half * 2, 2).float() / (dim_w_half * 2)
-                )
-            )
-            self.register_buffer("inv_freq_3d_w", inv_freq_w, persistent=False)
-            grid_w = torch.arange(max_size, dtype=torch.float32)
-            freqs_w = torch.outer(grid_w, inv_freq_w)
-            emb_w = torch.cat([freqs_w, freqs_w], dim=-1)
-            self.register_buffer("cos_3d_w", emb_w.cos(), persistent=False)
-            self.register_buffer("sin_3d_w", emb_w.sin(), persistent=False)
 
     def get_1d_embeddings(
         self,

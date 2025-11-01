@@ -268,7 +268,7 @@ class HippocampalMemory(nn.Module):
                 )
 
                 # Reset write pointer
-                self.write_ptr.fill_(len(kept_indices))
+                self.write_ptr.copy_(torch.tensor(len(kept_indices)))
 
 
 if __name__ == "__main__":
