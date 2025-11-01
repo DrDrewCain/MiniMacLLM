@@ -421,13 +421,11 @@ class TestBPETokenizer:
         # First training
         tokenizer.train(["Hello world test"], verbose=False)
         first_vocab_size = len(tokenizer.vocab)
-        first_merges = len(tokenizer.merges)
         first_vocab_copy = tokenizer.vocab.copy()
 
         # Second training on different data
         tokenizer.train(["Python programming language"], verbose=False)
         second_vocab_size = len(tokenizer.vocab)
-        second_merges = len(tokenizer.merges)
 
         # Vocab size should be similar (both aiming for 300)
         assert abs(first_vocab_size - second_vocab_size) < 10

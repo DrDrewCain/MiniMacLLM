@@ -356,9 +356,9 @@ class BPETokenizer:
             pair_to_merge = (first, second)
             new_token = self.merges[pair_to_merge]
 
-            # Apply merge only once per iteration to maintain O(n log n) complexity
-            # Rebuild tokens list using unpacking for better performance
-            tokens = [*tokens[:i], new_token, *tokens[i + 2 :]]
+            # Merge tokens in-place using slice assignment for O(n) per merge
+            # This is more efficient than list unpacking which creates a new list
+            tokens[i:i + 2] = [new_token]
 
         # Convert tokens to IDs
         # Note: With byte-level BPE, all tokens MUST exist in vocab after training

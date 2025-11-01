@@ -73,7 +73,7 @@ echo -e "${YELLOW}Test 1.3: Math knowledge (should be weak - not in training)${N
 python scripts/generate.py \
     --model "$MODEL_PATH" \
     --tokenizer "$TOKENIZER_PATH" \
-    --prompt "The ju is" \
+    --prompt "The quadratic formula is" \
     --max_tokens 50 \
     --temperature 0.7 \
     --top_k 50
