@@ -225,12 +225,12 @@ def create_domain_specific_tokenizer(
         ...     vocab_size=15000
         ... )
     """
-    # Define domain-specific special tokens
+    # Define domain-specific special tokens (byte-level BPE style)
     domain_special_tokens = {
-        "code": ["<PAD>", "<UNK>", "<BOS>", "<EOS>", "<INDENT>", "<DEDENT>", "<NEWLINE>"],
-        "math": ["<PAD>", "<UNK>", "<BOS>", "<EOS>", "<EQUATION>", "<PROOF>", "<THEOREM>"],
-        "medical": ["<PAD>", "<UNK>", "<BOS>", "<EOS>", "<DIAGNOSIS>", "<SYMPTOM>", "<TREATMENT>"],
-        "general": ["<PAD>", "<UNK>", "<BOS>", "<EOS>"],
+        "code": ["<|endoftext|>", "<|indent|>", "<|dedent|>", "<|newline|>"],
+        "math": ["<|endoftext|>", "<|equation|>", "<|proof|>", "<|theorem|>"],
+        "medical": ["<|endoftext|>", "<|diagnosis|>", "<|symptom|>", "<|treatment|>"],
+        "general": ["<|endoftext|>"],
     }
 
     special_tokens = domain_special_tokens.get(domain, domain_special_tokens["general"])
@@ -278,6 +278,59 @@ def test_tokenizer(tokenizer: BPETokenizer, test_texts: List[str]):
         # Check match
         match = text.lower().strip() == decoded.lower().strip()
         print(f"  Match: {'✓' if match else '✗'}")
+
+    # Test cache behavior
+    print("\n" + "-" * 60)
+    print("Testing Cache Behavior (LRU)")
+    print("-" * 60)
+
+    # Clear cache to test
+    tokenizer.cache.clear()
+
+    # Tokenize same word multiple times
+    test_word = "testing"
+    print(f"\nTokenizing '{test_word}' three times:")
+
+    import time
+
+    # First time (no cache)
+    start = time.time()
+    tokens1 = tokenizer._tokenize_word(test_word)
+    time1 = time.time() - start
+    print(f"  1st call: {time1:.6f}s (cache miss)")
+
+    # Second time (cache hit)
+    start = time.time()
+    tokens2 = tokenizer._tokenize_word(test_word)
+    time2 = time.time() - start
+    speedup = time1/time2 if time2 > 0 else float('inf')
+    print(f"  2nd call: {time2:.6f}s (cache hit, ~{speedup:.1f}x faster)")
+
+    # Verify same results
+    assert tokens1 == tokens2, "Cached result differs!"
+
+    # Test cache size and LRU eviction
+    print(f"\nCache size: {len(tokenizer.cache)}/{tokenizer.cache_maxsize}")
+
+    # Test error handling for missing tokens
+    print("\n" + "-" * 60)
+    print("Testing Error Handling")
+    print("-" * 60)
+
+    # Create a tokenizer with limited vocab to test error handling
+    test_tokenizer = BPETokenizer(vocab_size=10)
+    test_tokenizer.vocab = {"<|endoftext|>": 0}  # Only special token
+    test_tokenizer.byte_encoder = tokenizer.byte_encoder
+    test_tokenizer.merges = {}
+    test_tokenizer.merge_ranks = {}
+
+    try:
+        test_tokenizer._tokenize_word("test")
+        print("  ❌ Expected ValueError for untrained tokenizer")
+    except ValueError as e:
+        print(f"  ✓ Correctly raised ValueError: {str(e)[:60]}...")
+
+    print("\n✓ All tokenizer tests completed!")
 
 
 def get_tokenizer_stats(tokenizer: BPETokenizer, texts: List[str]) -> dict:

@@ -2,7 +2,7 @@
 # Production-ready for continual learning
 
 # Model Architecture
-vocab_size: 32000
+vocab_size: 8000  # Updated for byte-level BPE tokenizer
 d_model: 768
 num_layers: 12
 num_query_heads: 12
@@ -28,6 +28,6 @@ rope_base: 10000.0
 bias: false
 tie_embeddings: true
 
-# Estimated Parameters: ~200M
-# Memory: ~800MB (fp32), ~400MB (fp16)
+# Estimated Parameters: ~109M (with 8K vocab)
+# Memory: ~436MB (fp32), ~218MB (fp16)
 # Recommended for: Production, continual learning, Apple Silicon

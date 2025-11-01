@@ -12,19 +12,36 @@ NC='\033[0m' # No Color
 
 echo "============================================================"
 echo "Continual Learning Demonstration"
+echo "with Byte-Level BPE Tokenizer"
 echo "============================================================"
 echo ""
 
 # Configuration
-MODEL_PATH="checkpoints/wikitext_medium/final/model.pt"
-TOKENIZER_PATH="data/tokenizers/wikitext_8k"
+MODEL_PATH="checkpoints/wikitext_medium_byte_level/final/model.pt"
+TOKENIZER_PATH="data/tokenizers/wikitext_8k_byte_level"
 PYTHON_DATA="data/continual_learning/python_basics.txt"
 MATH_DATA="data/continual_learning/math_concepts.txt"
 
 # Check if base model exists
 if [ ! -f "$MODEL_PATH" ]; then
     echo "Error: Base model not found at $MODEL_PATH"
-    echo "Please run pre-training first."
+    echo ""
+    echo "Please train the model first with:"
+    echo "  python scripts/pretrain.py \\"
+    echo "    --config configs/medium.yaml \\"
+    echo "    --data data/raw/wikitext2_train.txt \\"
+    echo "    --tokenizer $TOKENIZER_PATH \\"
+    echo "    --save_dir checkpoints/wikitext_medium_byte_level \\"
+    echo "    --epochs 5 \\"
+    echo "    --batch_size 8 \\"
+    echo "    --device mps"
+    exit 1
+fi
+
+# Check if byte-level tokenizer exists
+if [ ! -d "$TOKENIZER_PATH" ]; then
+    echo "Error: Byte-level tokenizer not found at $TOKENIZER_PATH"
+    echo "The tokenizer should already be trained. Please check the path."
     exit 1
 fi
 
@@ -174,4 +191,11 @@ echo "This demonstrates:"
 echo "  1. Real-time learning (new domains learned in minutes)"
 echo "  2. Zero catastrophic forgetting (LoRA + Replay + EWC)"
 echo "  3. Parameter efficiency (97% of params shared across domains)"
+echo "  4. Byte-level BPE tokenizer (handles ANY Unicode without <UNK>)"
+echo ""
+echo "Tokenizer features:"
+echo "  - 8,000 token vocabulary (257 base + 7,743 learned merges)"
+echo "  - Batch encoding with padding/truncation"
+echo "  - Offset mapping for character-to-token alignment"
+echo "  - LRU caching for fast repeated encodings"
 echo ""
