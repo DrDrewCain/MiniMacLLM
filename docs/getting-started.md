@@ -1,6 +1,6 @@
 # Getting Started
 
-Get up and running with MiniMacLLM - the brain-inspired continual learning LLM!
+Get up and running with MiniMacLLM - the brain-inspired continual learning language model!
 
 ## Installation
 

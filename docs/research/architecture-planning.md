@@ -174,7 +174,7 @@ class GroupedQueryAttention(nn.Module):
 **Key Benefits:**
 - 4-8x reduction in KV cache size
 - Minimal quality degradation vs MHA
-- Used in Llama 3, Mistral, GPT-4
+- Modern best practice
 
 ---
 
@@ -223,7 +223,7 @@ def apply_rotary_emb(x, freqs_cos, freqs_sin):
 class SwiGLU(nn.Module):
     """
     SwiGLU: Swish-Gated Linear Unit
-    Used in PaLM, Llama 3, etc.
+    Modern best practice
 
     Formula: SwiGLU(x, W, V) = Swish(xW) ⊗ (xV)
     where Swish(x) = x * sigmoid(x)
@@ -269,7 +269,7 @@ class RMSNorm(nn.Module):
 **Key Benefits:**
 - Faster than LayerNorm (no mean subtraction)
 - Same performance
-- Used in Llama 3, T5
+- Modern best practice
 
 ---
 

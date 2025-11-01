@@ -17,7 +17,7 @@ A **research-level continual learning LLM** that can:
 
 ### The Problem We Solved
 
-Traditional LLMs (GPT, LLaMA, Claude):
+Traditional language models:
 ```text
 Train once (months) → Deploy → Static forever
 ❌ Can't learn new information without full retraining
@@ -58,7 +58,7 @@ Small base model → Continuous learning → Never forgets → Updates in second
 
 1. **RMSNorm** - Modern normalization
    - Faster than LayerNorm
-   - Used in LLaMA 3, T5
+   - Modern best practice
 
 2. **RoPE (Rotary Position Embeddings)**
    - No learned parameters
@@ -72,7 +72,7 @@ Small base model → Continuous learning → Never forgets → Updates in second
 
 4. **SwiGLU Feed-Forward**
    - Better than GELU
-   - Used in LLaMA 3, PaLM
+   - Modern best practice
 
 5. **Modern Transformer Block**
    - Pre-normalization
@@ -388,7 +388,7 @@ Example:
 ### Priority 3: Nice-to-have (10-15 hours)
 
 8. **Knowledge Distillation**
-   - Learn from GPT-4/Claude
+   - Learn from teacher models
    - Bootstrap quality
 
 9. **Advanced Evaluation**
@@ -445,7 +445,7 @@ A 200M model that learns continuously > 70B static model on user's specific doma
 - Measure forgetting empirically
 
 ### Medium-Term (1-2 months)
-- Knowledge distillation from GPT-4
+- Knowledge distillation from teacher models
 - Multi-modal support (images + text)
 - Longer context (32K-128K tokens)
 - More efficient attention (Flash Attention)
@@ -505,7 +505,7 @@ A 200M model that learns continuously > 70B static model on user's specific doma
 
 ### Future-Proof
 - Modern architecture (2024-2025)
-- Based on LLaMA 3, Mistral
+- Based on modern transformer architectures
 - Scalable design
 - Active research area
 
@@ -571,8 +571,6 @@ learner.save_checkpoint("my_custom_llm")
 3. SwiGLU: "GLU Variants Improve Transformer" (Shazeer, 2020)
 
 **Modern LLMs:**
-1. LLaMA 3 (Meta, 2024)
-2. Mistral (Mistral AI, 2023)
 3. GPT-NeoX (EleutherAI)
 
 ---
@@ -583,7 +581,7 @@ learner.save_checkpoint("my_custom_llm")
 - ✅ Zero catastrophic forgetting (< 5% loss on old tasks)
 - ✅ Fast updates (< 10 seconds for 1000 examples)
 - ✅ Memory efficient (< 8GB on M1 Mac)
-- ⏳ High quality (competitive with GPT-3.5 on specialized tasks)
+- ⏳ High quality (competitive with capable language models on specialized tasks)
 
 ### Practical
 - ✅ Production-quality code

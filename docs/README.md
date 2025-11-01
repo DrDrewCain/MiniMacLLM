@@ -58,7 +58,7 @@ Unlike traditional AI where humans set learning parameters, MiniMacLLM implement
 - **Homeostatic Plasticity** - Stable neural activity
 - **Dendritic Computation** - Network-in-a-neuron
 
-### Modern LLM Architecture
+### Modern Transformer Architecture
 - Grouped Query Attention (GQA) - 4x cache reduction
 - Rotary Position Embeddings (RoPE)
 - SwiGLU activation functions

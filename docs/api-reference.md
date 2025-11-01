@@ -1,6 +1,6 @@
 # API Reference
 
-Complete API documentation for Continual LLM.
+Complete API documentation for Continual language model.
 
 ## Core Modules
 

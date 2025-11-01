@@ -138,7 +138,7 @@ src/
 │   ├── hippocampal_memory.py     # Pattern separation/completion
 │   └── sleep_consolidation.py    # Offline strengthening
 │
-├── model/                  # Core LLM
+├── model/                  # Core language model
 │   ├── llm.py             # Main model
 │   ├── attention.py       # GQA implementation
 │   ├── embeddings.py      # RoPE
@@ -255,7 +255,7 @@ New Domain Data
 ### Why GQA over MHA?
 - 4x reduction in KV cache size
 - Minimal quality loss
-- Industry standard (Llama 3, Mistral)
+- Modern best practice for efficient attention
 
 ### Why LoRA for Continual Learning?
 - Only update 2-3% of parameters

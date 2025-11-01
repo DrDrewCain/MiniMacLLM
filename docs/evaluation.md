@@ -1,6 +1,6 @@
 # Evaluation and Testing Guide
 
-Complete guide for evaluating and testing the continual learning LLM system.
+Complete guide for evaluating and testing the continual learning language model system.
 
 ---
 
