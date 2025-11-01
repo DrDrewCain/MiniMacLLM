@@ -176,7 +176,9 @@ class SleepConsolidation:
                                         strengthen_mask.float()
                                     )
 
-                                    module.lora_B.data += strengthening @ module.lora_A
+                                    # Fix matmul: strengthening is (out, in), lora_A is (r, in)
+                                    # We need to project strengthening back through A^T
+                                    module.lora_B.data += strengthening @ module.lora_A.t()
                                     connections_strengthened += strengthen_mask.sum().item()
 
                 # Synaptic pruning: remove very small weights

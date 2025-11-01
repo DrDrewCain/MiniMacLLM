@@ -190,6 +190,22 @@ class MultimodalContinualLearner(ContinualLearner):
                 self.device
             )
 
+        # Add vision and fusion parameters to optimizer
+        if config.enable_vision:
+            vision_params = []
+            if self.vision_lora_model is not None:
+                vision_params.extend(self.vision_lora_model.get_trainable_parameters())
+            if self.fusion_layer is not None:
+                vision_params.extend(self.fusion_layer.parameters())
+
+            if vision_params:
+                # Add new parameter group to existing optimizer
+                self.optimizer.add_param_group({
+                    'params': vision_params,
+                    'lr': config.learning_rate
+                })
+                print(f"Added {len(vision_params)} vision parameter groups to optimizer")
+
         # Track vision domains
         self.vision_domains = set(config.vision_domains)
         self.active_vision_domain = adapter_name
@@ -250,31 +266,36 @@ class MultimodalContinualLearner(ContinualLearner):
         if self.vision_encoder is None:
             return None
 
-        self.vision_encoder.eval()
+        # Keep encoder in training mode if we have LoRA adapters
+        if self.vision_lora_model is not None:
+            self.vision_encoder.train()
+        else:
+            self.vision_encoder.eval()
+
         features = []
 
-        with torch.no_grad():
-            if images:
-                for img in images:
-                    # Add batch dimension if needed
-                    if img.dim() == 3:
-                        img = img.unsqueeze(0)
-                    img = img.to(self.device)
+        # Remove no_grad to allow vision fine-tuning
+        if images:
+            for img in images:
+                # Add batch dimension if needed
+                if img.dim() == 3:
+                    img = img.unsqueeze(0)
+                img = img.to(self.device)
 
-                    # Encode image
-                    feat = self.vision_encoder(img, is_video=False)
-                    features.append(feat)
+                # Encode image
+                feat = self.vision_encoder(img, is_video=False)
+                features.append(feat)
 
-            if videos:
-                for vid in videos:
-                    # Add batch dimension if needed
-                    if vid.dim() == 4:
-                        vid = vid.unsqueeze(0)
-                    vid = vid.to(self.device)
+        if videos:
+            for vid in videos:
+                # Add batch dimension if needed
+                if vid.dim() == 4:
+                    vid = vid.unsqueeze(0)
+                vid = vid.to(self.device)
 
-                    # Encode video
-                    feat = self.vision_encoder(vid, is_video=True)
-                    features.append(feat)
+                # Encode video
+                feat = self.vision_encoder(vid, is_video=True)
+                features.append(feat)
 
         if features:
             return torch.cat(features, dim=1)  # Concat along token dim

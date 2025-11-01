@@ -173,24 +173,29 @@ class LiquidLoRALayer(nn.Module):
         if self.config.use_liquid_dynamics and update_dynamics:
             # Update B with liquid dynamics (no grad through liquid updates)
             with torch.no_grad():
+                # Initialize hidden state to lora_B if it's all zeros (first call)
+                if self.hidden_B.abs().sum() == 0:
+                    self.hidden_B.copy_(self.lora_B)
+
                 for _ in range(self.config.adaptation_steps):
                     # Process each row of B independently
                     for i in range(self.out_features):
-                        # Target (learned LoRA parameters)
+                        # Target: learned LoRA parameters (what we want to converge to)
                         target = self.lora_B[i].unsqueeze(0)
 
-                        # Liquid update
+                        # Liquid update: evolve hidden state toward target
                         new_b_row = self.liquid_cell_B(
-                            target,  # Input
-                            self.hidden_B[i].unsqueeze(0),  # Hidden
+                            target,  # Input (target state)
+                            self.hidden_B[i].unsqueeze(0),  # Current hidden state
                             dt=dt
                         )
 
-                        # Update hidden state
+                        # Update hidden state (smooth adaptation)
                         self.hidden_B[i] = new_b_row.squeeze(0)
 
-            # Use liquid-evolved B (detach for gradient flow through lora_B)
-            B_effective = self.hidden_B.detach() + self.lora_B - self.lora_B.detach()
+            # Use liquid-evolved hidden state
+            # This allows gradients to flow through lora_B while using smoothed dynamics
+            B_effective = self.hidden_B
         else:
             # Use standard B
             B_effective = self.lora_B
