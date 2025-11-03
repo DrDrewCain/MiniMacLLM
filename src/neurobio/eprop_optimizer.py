@@ -137,18 +137,22 @@ class EPropOptimizer(Optimizer):
                 prediction_error=prediction_error,
                 previous_loss=prev_loss
             )
-            self.previous_loss = loss.detach()
         else:
             # Fallback to base sensitivity if no loss provided
             base_lr = self.learning_controller.config.base_sensitivity
 
         # Compute global neuromodulator if not provided
+        # IMPORTANT: Do this BEFORE updating self.previous_loss to get correct improvement
         if neuromodulator is None and loss is not None and self.previous_loss is not None:
             # Use loss improvement as neuromodulator (reward signal)
             improvement = self.previous_loss - loss
             neuromodulator = torch.sigmoid(improvement)  # Normalize to [0,1]
         elif neuromodulator is None:
             neuromodulator = torch.tensor(1.0)
+
+        # Update previous loss AFTER computing neuromodulator
+        if loss is not None:
+            self.previous_loss = loss.detach()
 
         self.global_step += 1
 
