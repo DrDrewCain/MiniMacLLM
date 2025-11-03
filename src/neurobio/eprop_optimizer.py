@@ -17,7 +17,6 @@ Reference: https://www.nature.com/articles/s41467-020-17236-y
 import torch
 from torch.optim import Optimizer
 from typing import Optional, Dict, List
-import math
 
 
 class EPropOptimizer(Optimizer):
