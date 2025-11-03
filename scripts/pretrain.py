@@ -28,11 +28,8 @@ from src.neurobio.autonomous_learning import (
     AdaptiveOptimizer
 )
 from src.neurobio.eprop_optimizer import (
-    EPropOptimizer,
-    ContinualEPropOptimizer
+    EPropOptimizer
 )
-
-
 class TextDataset(Dataset):
     """Simple text dataset for pre-training."""
 
