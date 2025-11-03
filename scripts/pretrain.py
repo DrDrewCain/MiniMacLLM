@@ -22,8 +22,14 @@ sys.path.append(str(Path(__file__).parent.parent))
 
 from src.model.llm import ContinualLLM, ModelConfig
 from src.tokenization.bpe_tokenizer import BPETokenizer
-
-
+from src.neurobio.autonomous_learning import (
+    AutonomousLearningRateController,
+    AutonomousLearningConfig,
+    AdaptiveOptimizer
+)
+from src.neurobio.eprop_optimizer import (
+    EPropOptimizer
+)
 class TextDataset(Dataset):
     """Simple text dataset for pre-training."""
 
@@ -85,11 +91,13 @@ def collate_fn(batch):
     }
 
 
-def train_epoch(model, dataloader, optimizer, device, epoch, grad_accumulation_steps=1):
-    """Train for one epoch."""
+def train_epoch(model, dataloader, optimizer, device, epoch, grad_accumulation_steps=1,
+                use_autonomous_lr=False, learning_controller=None):
+    """Train for one epoch with optional autonomous learning rate."""
     model.train()
     total_loss = 0
     num_batches = 0
+    accumulated_loss = None
 
     progress = tqdm(dataloader, desc=f"Epoch {epoch}")
 
@@ -113,20 +121,48 @@ def train_epoch(model, dataloader, optimizer, device, epoch, grad_accumulation_s
         # Scale loss by accumulation steps
         loss = loss / grad_accumulation_steps
 
+        # Track unscaled loss for adaptive optimizer
+        if accumulated_loss is None:
+            accumulated_loss = loss.clone()
+        else:
+            accumulated_loss += loss.clone()
+
         # Backward
         loss.backward()
 
         # Update weights every grad_accumulation_steps
         if (batch_idx + 1) % grad_accumulation_steps == 0:
             torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
-            optimizer.step()
+
+            if use_autonomous_lr:
+                if isinstance(optimizer, EPropOptimizer):
+                    # E-prop needs loss for autonomous LR and neuromodulation
+                    optimizer.step(loss=accumulated_loss * grad_accumulation_steps)
+                elif isinstance(optimizer, AdaptiveOptimizer):
+                    # Adaptive optimizer needs loss for autonomous LR
+                    optimizer.step(loss=accumulated_loss * grad_accumulation_steps)
+                else:
+                    optimizer.step()
+            else:
+                optimizer.step()
+
             optimizer.zero_grad()
+            accumulated_loss = None
 
         total_loss += loss.item() * grad_accumulation_steps
         num_batches += 1
 
-        # Update progress bar
-        progress.set_postfix({'loss': total_loss / num_batches})
+        # Update progress bar with more info
+        if use_autonomous_lr and learning_controller:
+            dynamics = learning_controller.get_learning_dynamics()
+            current_lr = learning_controller.lr_history[-1]['lr'] if learning_controller.lr_history else learning_controller.config.base_sensitivity
+            progress.set_postfix({
+                'loss': total_loss / num_batches,
+                'lr': f'{current_lr:.2e}',
+                'success': f'{dynamics["success_rate"]:.0%}'
+            })
+        else:
+            progress.set_postfix({'loss': total_loss / num_batches})
 
     return total_loss / num_batches
 
@@ -152,9 +188,31 @@ def main():
                        help="Path to trained tokenizer")
     parser.add_argument("--batch_size", type=int, default=4)
     parser.add_argument("--grad_accumulation", type=int, default=4)
-    parser.add_argument("--learning_rate", type=float, default=3e-4)
+    parser.add_argument("--learning_rate", type=float, default=3e-4,
+                       help="Fixed learning rate (ignored if --use_autonomous_lr)")
     parser.add_argument("--epochs", type=int, default=3)
     parser.add_argument("--device", type=str, default="mps")
+
+    # Autonomous learning
+    parser.add_argument("--use_autonomous_lr", action="store_true",
+                       help="Use brain-inspired autonomous learning rate")
+    parser.add_argument("--optimizer_type", type=str, default="sgd",
+                       choices=["sgd", "adam", "eprop"],
+                       help="Optimizer type: sgd (simple), adam (standard), eprop (continual learning)")
+    parser.add_argument("--base_sensitivity", type=float, default=1.0,
+                       help="Base sensitivity for autonomous LR (not a learning rate!)")
+    parser.add_argument("--min_lr", type=float, default=1e-6,
+                       help="Minimum allowed emergent learning rate")
+    parser.add_argument("--max_lr", type=float, default=1e-2,
+                       help="Maximum allowed emergent learning rate")
+
+    # E-prop specific
+    parser.add_argument("--trace_decay", type=float, default=0.95,
+                       help="Eligibility trace decay for e-prop optimizer")
+    parser.add_argument("--beta1", type=float, default=0.9,
+                       help="Learning signal momentum (beta1) for e-prop")
+    parser.add_argument("--beta2", type=float, default=0.999,
+                       help="Neuromodulator scaling (beta2) for e-prop")
 
     # Checkpointing
     parser.add_argument("--save_dir", type=str, default="checkpoints")
@@ -233,12 +291,58 @@ def main():
     )
 
     # Create optimizer
-    optimizer = torch.optim.AdamW(
-        model.parameters(),
-        lr=args.learning_rate,
-        betas=(0.9, 0.95),
-        weight_decay=0.1
-    )
+    if args.use_autonomous_lr:
+        print("Using autonomous learning rate (emergent from mathematical principles)")
+        autonomous_config = AutonomousLearningConfig(
+            base_sensitivity=args.base_sensitivity,
+            min_rate=args.min_lr,
+            max_rate=args.max_lr,
+            adaptation_speed=0.01,
+            uncertainty_weight=0.5,
+            metabolic_cost_weight=0.1
+        )
+        learning_controller = AutonomousLearningRateController(autonomous_config)
+
+        # Choose optimizer type
+        if args.optimizer_type == "eprop":
+            print(f"  Optimizer: EProp (Eligibility Propagation)")
+            print(f"  Trace decay: {args.trace_decay}")
+            print(f"  Beta1 (learning signal): {args.beta1}")
+            print(f"  Beta2 (neuromodulator): {args.beta2}")
+            optimizer = EPropOptimizer(
+                model.parameters(),
+                learning_controller=learning_controller,
+                trace_decay=args.trace_decay,
+                beta1=args.beta1,
+                beta2=args.beta2,
+                weight_decay=0.1
+            )
+        elif args.optimizer_type == "adam":
+            print(f"  Optimizer: Adaptive SGD (basic)")
+            optimizer = AdaptiveOptimizer(
+                model.parameters(),
+                learning_controller=learning_controller,
+                weight_decay=0.1
+            )
+        else:  # sgd
+            print(f"  Optimizer: Adaptive SGD (basic)")
+            optimizer = AdaptiveOptimizer(
+                model.parameters(),
+                learning_controller=learning_controller,
+                weight_decay=0.1
+            )
+
+        print(f"  Base sensitivity: {args.base_sensitivity}")
+        print(f"  LR will emerge between {args.min_lr} and {args.max_lr}\n")
+    else:
+        print(f"Using fixed learning rate: {args.learning_rate}")
+        optimizer = torch.optim.AdamW(
+            model.parameters(),
+            lr=args.learning_rate,
+            betas=(0.9, 0.95),
+            weight_decay=0.1
+        )
+        learning_controller = None
 
     # Training loop
     print("Starting training...\n")
@@ -247,7 +351,9 @@ def main():
     for epoch in range(1, args.epochs + 1):
         avg_loss = train_epoch(
             model, dataloader, optimizer, device, epoch,
-            grad_accumulation_steps=args.grad_accumulation
+            grad_accumulation_steps=args.grad_accumulation,
+            use_autonomous_lr=args.use_autonomous_lr,
+            learning_controller=learning_controller
         )
 
         print(f"Epoch {epoch}/{args.epochs} - Loss: {avg_loss:.4f}")
@@ -268,6 +374,19 @@ def main():
 
     elapsed = time.time() - start_time
     print(f"Training complete! Time: {elapsed/60:.2f} minutes")
+
+    # Print autonomous learning summary if used
+    if args.use_autonomous_lr and learning_controller.lr_history:
+        print("\nAutonomous Learning Rate Summary:")
+        print(f"  Initial LR: {learning_controller.lr_history[0]['lr']:.6f}")
+        print(f"  Final LR: {learning_controller.lr_history[-1]['lr']:.6f}")
+        print(f"  Min LR seen: {min(h['lr'] for h in learning_controller.lr_history):.6f}")
+        print(f"  Max LR seen: {max(h['lr'] for h in learning_controller.lr_history):.6f}")
+
+        dynamics = learning_controller.get_learning_dynamics()
+        print(f"  Final success rate: {dynamics['success_rate']:.2%}")
+        print(f"  Final metabolic cost: {dynamics['metabolic_cost']:.4f}")
+        print("  LR emerged from mathematical principles - no human presets!")
 
     # Save final model
     final_path = Path(args.save_dir) / "final"

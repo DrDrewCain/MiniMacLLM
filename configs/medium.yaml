@@ -1,17 +1,17 @@
 # Medium Model Configuration (~200M parameters)
-# Production-ready for continual learning
+# Production-ready for continual learning experiments
 
 # Model Architecture
-vocab_size: 8000  # Updated for byte-level BPE tokenizer
-d_model: 768
-num_layers: 12
-num_query_heads: 12
-num_kv_heads: 3  # 4:1 GQA ratio
-d_ff: 3072
-max_seq_len: 2048
+vocab_size: 8000  # Byte-level BPE tokenizer
+d_model: 896  # Increased from 768
+num_layers: 16  # Increased from 12
+num_query_heads: 14  # Increased, divisible by d_model (896/64=14 heads)
+num_kv_heads: 2  # 7:1 GQA ratio for efficiency
+d_ff: 3584  # 4x d_model
+max_seq_len: 1024  # Reasonable for training
 
 # Regularization
-dropout: 0.0  # No dropout for medium+ models
+dropout: 0.0  # No dropout for stable training
 attention_dropout: 0.0
 
 # Normalization
@@ -28,6 +28,11 @@ rope_base: 10000.0
 bias: false
 tie_embeddings: true
 
-# Estimated Parameters: ~109M (with 8K vocab)
-# Memory: ~436MB (fp32), ~218MB (fp16)
-# Recommended for: Production, continual learning, Apple Silicon
+# Estimated Parameters: ~203M
+# Breakdown:
+#   Embeddings: 8000 * 896 = ~7M
+#   Layers: 16 * (896^2 * 4 + 896 * 3584 * 2) = ~195M
+#   Output: tied with embeddings
+# Memory: ~812MB (fp32), ~406MB (fp16)
+# Training: Batch 8-12 on 16GB+ GPU, batch 4-6 on Apple Silicon
+# Recommended for: Research, continual learning, multi-domain adaptation
