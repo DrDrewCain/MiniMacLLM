@@ -137,7 +137,7 @@ class EPropOptimizer(Optimizer):
                 prediction_error=prediction_error,
                 previous_loss=prev_loss
             )
-            self.previous_loss = loss.clone()
+            self.previous_loss = loss.detach()
         else:
             # Fallback to base sensitivity if no loss provided
             base_lr = self.learning_controller.config.base_sensitivity
